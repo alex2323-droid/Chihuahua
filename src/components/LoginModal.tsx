@@ -173,9 +173,20 @@ export function LoginModal({
       )}
 
       {error && (
-        <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
-          <span>{error}</span>
+        <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <span>{error}</span>
+            {error.includes('ya está registrado') && (
+              <button
+                type="button"
+                onClick={() => handleTabChange('login')}
+                className="block mt-1.5 font-bold text-emerald-700 hover:text-emerald-800 underline cursor-pointer"
+              >
+                👉 Haz clic aquí para Iniciar Sesión con tu contraseña
+              </button>
+            )}
+          </div>
         </div>
       )}
 

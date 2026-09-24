@@ -63,9 +63,24 @@ export default function App() {
 
   const [catalogs, setCatalogs] = useState<Catalog[]>(() => {
     const saved = localStorage.getItem('catalogcraft_catalogs');
-    return saved ? JSON.parse(saved) : initialCatalogs;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Discard historical demo placeholders
+          const hasDemos = parsed.some((c: any) =>
+            c.products?.some((p: any) => p.id?.startsWith('demo_') || p.title?.includes('Zapatillas Urban Minimalist'))
+          );
+          if (!hasDemos) {
+            return parsed;
+          }
+        }
+      } catch {}
+    }
+    return [];
   });
 
+  const [isLoadingCatalogs, setIsLoadingCatalogs] = useState<boolean>(() => catalogs.length === 0);
   const [activeCatalogId, setActiveCatalogId] = useState<string>(() => catalogs[0]?.id || 'cat_principal');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCustomerMode, setIsCustomerMode] = useState<boolean>(() => {
@@ -236,6 +251,7 @@ export default function App() {
 
     // Subscribe to cloud catalogs
     const unsubCatalogs = subscribeToSellerCatalogs(targetUid, (cloudCatalogs) => {
+      setIsLoadingCatalogs(false);
       if (cloudCatalogs && cloudCatalogs.length > 0) {
         const cloudStr = JSON.stringify(cloudCatalogs);
         isRemoteCatalogUpdateRef.current = true;
@@ -248,6 +264,8 @@ export default function App() {
         });
       }
       hasLoadedCatalogsFromCloud.current = true;
+    }, () => {
+      setIsLoadingCatalogs(false);
     });
 
     return () => {
@@ -982,7 +1000,26 @@ export default function App() {
         </div>
 
         {/* Product Grid Area */}
-        {filteredProducts.length === 0 ? (
+        {isLoadingCatalogs && (!activeCatalog || activeCatalog.products.length === 0) ? (
+          <div className={gridLayoutClass}>
+            {[1, 2, 3, 4, 5, 6].map((idx) => (
+              <div
+                key={idx}
+                className="bg-white rounded-3xl border border-slate-200/80 p-4 animate-pulse flex flex-col space-y-3 shadow-xs"
+              >
+                <div className="w-full aspect-square bg-slate-100 rounded-2xl flex items-center justify-center text-slate-300">
+                  <Sparkles className="w-8 h-8 opacity-25" />
+                </div>
+                <div className="h-4 bg-slate-100 rounded-md w-3/4" />
+                <div className="h-3 bg-slate-100 rounded-md w-1/2" />
+                <div className="flex justify-between items-center pt-2">
+                  <div className="h-5 bg-slate-100 rounded-md w-1/3" />
+                  <div className="h-8 bg-slate-100 rounded-xl w-24" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredProducts.length === 0 ? (
           <div className="bg-white rounded-3xl border border-slate-200/90 p-12 text-center max-w-md mx-auto my-12 shadow-2xs">
             <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
               <Search className="w-6 h-6" />

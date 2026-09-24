@@ -565,7 +565,7 @@ export function formatCustomerUsernameToEmail(username: string): string {
     .replace(/[^a-z0-9_.-]/g, '');
   
   const finalUsername = normalized.length > 0 ? normalized : 'cliente';
-  return `${finalUsername}@client.internal`;
+  return `${finalUsername}@catalogcraft.com`;
 }
 
 // Customer Auth Handler: Sign In
@@ -592,6 +592,16 @@ export async function signInCustomer(username: string, rawPassword: string): Pro
     } catch {}
     return { user: userCred.user, username: clean };
   } catch (err: any) {
+    // If sign in fails, check if the account was registered with legacy @client.internal domain
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
+      try {
+        const legacyClean = clean.toLowerCase().replace(/[^a-z0-9_]/g, '');
+        const legacyEmail = `${legacyClean || 'client'}@client.internal`;
+        const legacyCred = await signInWithEmailAndPassword(auth, legacyEmail, password);
+        return { user: legacyCred.user, username: clean };
+      } catch {}
+    }
+
     if (
       err.code === 'auth/user-not-found' ||
       err.code === 'auth/invalid-credential' ||
@@ -629,17 +639,15 @@ export async function registerCustomer(username: string, rawPassword: string): P
   try {
     const newCred = await createUserWithEmailAndPassword(auth, email, password);
     
-    // Save customer record in Firestore
-    try {
-      await setDoc(doc(db, 'customers', newCred.user.uid), {
-        username: clean,
-        email: email,
-        customerId: newCred.user.uid,
-        createdAt: new Date().toISOString(),
-      });
-    } catch (dbErr) {
+    // Save customer record in Firestore asynchronously without blocking registration
+    setDoc(doc(db, 'customers', newCred.user.uid), {
+      username: clean,
+      email: email,
+      customerId: newCred.user.uid,
+      createdAt: new Date().toISOString(),
+    }).catch((dbErr) => {
       console.warn('Could not persist customer profile to Firestore:', dbErr);
-    }
+    });
     
     return { user: newCred.user, username: clean };
   } catch (err: any) {
