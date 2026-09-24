@@ -41,7 +41,12 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
 
     try {
       if (activeTab === 'seller') {
-        const res = await loginSeller(username, password);
+        const cleanUser = username.trim();
+        const cleanPass = password.trim();
+        if (cleanUser !== 'Chihuahua' || cleanPass !== '1306') {
+          throw new Error('Contraseña o usuario de Vendedor incorrecto. Solo el usuario "Chihuahua" con contraseña "1306" puede iniciar sesión como Administrador/Vendedor.');
+        }
+        const res = await loginSeller(cleanUser, cleanPass);
         onLoginSuccess(res.username, 'seller');
       } else {
         const res = await loginCustomer(username, password);

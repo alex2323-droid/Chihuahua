@@ -56,6 +56,8 @@ export const Header: React.FC<HeaderProps> = ({
   isSyncing,
   userRole = 'seller',
 }) => {
+  const isActualSeller = userRole === 'seller' && currentSellerName === 'Chihuahua';
+
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs no-print">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -81,7 +83,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </a>
                 
                 {/* Auto-save cloud status badge */}
-                {currentSellerName && (
+                {isActualSeller && (
                   <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 sm:px-2 py-0.5 rounded-full border border-emerald-200" title="Todos tus cambios se guardan automáticamente en tu cuenta">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     <CloudCheck className="w-3.5 h-3.5 text-emerald-600" />
@@ -90,60 +92,62 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </div>
               <span className="text-[10px] sm:text-[11px] text-slate-500 font-medium block mt-0.5 truncate max-w-[140px] sm:max-w-none">
-                {currentSellerName ? `Vendedor: ${currentSellerName}` : 'Generador de Catálogos'}
+                {currentSellerName ? (isActualSeller ? 'Administrador: Chihuahua' : `Cliente: ${currentSellerName}`) : 'Catálogo Oficial de Productos'}
               </span>
             </div>
           </div>
 
           {/* Zone 2: Catalog Switcher & Mode Toggle */}
-          <div className="hidden md:flex items-center gap-2">
-            {!isCustomerMode && (
-              <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
-                {catalogs.map((cat) => (
+          {isActualSeller && (
+            <div className="hidden md:flex items-center gap-2">
+              {!isCustomerMode && (
+                <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
+                  {catalogs.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => onSelectCatalog(cat.id)}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${
+                        cat.id === activeCatalogId
+                          ? 'bg-white text-slate-900 shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      {cat.title} ({cat.products.length})
+                    </button>
+                  ))}
                   <button
-                    key={cat.id}
-                    onClick={() => onSelectCatalog(cat.id)}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${
-                      cat.id === activeCatalogId
-                        ? 'bg-white text-slate-900 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
+                    onClick={onCreateCatalog}
+                    className="px-2 py-1.5 text-slate-500 hover:text-slate-900 transition-colors rounded-lg text-xs flex items-center gap-1"
+                    title="Nuevo Catálogo"
                   >
-                    {cat.title} ({cat.products.length})
+                    <ListPlus className="w-3.5 h-3.5" />
                   </button>
-                ))}
-                <button
-                  onClick={onCreateCatalog}
-                  className="px-2 py-1.5 text-slate-500 hover:text-slate-900 transition-colors rounded-lg text-xs flex items-center gap-1"
-                  title="Nuevo Catálogo"
-                >
-                  <ListPlus className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
-
-            {/* Mode Switcher */}
-            <button
-              onClick={onToggleCustomerMode}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 border ${
-                isCustomerMode
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-              }`}
-            >
-              {isCustomerMode ? (
-                <>
-                  <Store className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Modo Tienda Interactiva</span>
-                </>
-              ) : (
-                <>
-                  <Eye className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Vista Previa Cliente</span>
-                </>
+                </div>
               )}
-            </button>
-          </div>
+
+              {/* Mode Switcher */}
+              <button
+                onClick={onToggleCustomerMode}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 border ${
+                  isCustomerMode
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                    : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                {isCustomerMode ? (
+                  <>
+                    <Store className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Modo Tienda Interactiva</span>
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Vista Previa Cliente</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
 
           {/* Zone 3: Seller Account & Actions */}
           <div className="flex items-center gap-2 shrink-0">

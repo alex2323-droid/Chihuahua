@@ -106,7 +106,7 @@ export default function App() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   // Role calculation
-  const isSeller = userRole === 'seller';
+  const isSeller = userRole === 'seller' && currentSellerName === 'Chihuahua';
   const effectiveCustomerMode = !isSeller || isCustomerMode;
 
   // Filters & Search
@@ -558,26 +558,28 @@ export default function App() {
                 <span>{currentSellerName ? 'Mi Cuenta' : 'Ingresar'}</span>
               </button>
 
-              <button
-                onClick={() => setIsCustomerMode(!effectiveCustomerMode)}
-                className={`px-2.5 py-1.5 text-xs font-semibold rounded-xl border flex items-center gap-1 ${
-                  effectiveCustomerMode
-                    ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                    : 'bg-slate-100 border-slate-200 text-slate-700'
-                }`}
-              >
-                {effectiveCustomerMode ? (
-                  <>
-                    <Store className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>Vendedor</span>
-                  </>
-                ) : (
-                  <>
-                    <Eye className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                    <span>Cliente</span>
-                  </>
-                )}
-              </button>
+              {isSeller && (
+                <button
+                  onClick={() => setIsCustomerMode(!effectiveCustomerMode)}
+                  className={`px-2.5 py-1.5 text-xs font-semibold rounded-xl border flex items-center gap-1 ${
+                    effectiveCustomerMode
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                      : 'bg-slate-100 border-slate-200 text-slate-700'
+                  }`}
+                >
+                  {effectiveCustomerMode ? (
+                    <>
+                      <Store className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Vendedor</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                      <span>Cliente</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
 
