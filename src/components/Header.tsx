@@ -60,44 +60,44 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs no-print">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16 gap-2 sm:gap-4">
           
           {/* Zone 1: Brand Wordmark & Cloud Sync Status */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
             {settings.storeLogo && settings.storeLogo.trim() !== '' ? (
               <img
                 src={settings.storeLogo}
                 alt={settings.storeName}
-                className="w-9 h-9 rounded-lg object-cover border border-slate-200"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-cover border border-slate-200 shrink-0"
               />
             ) : (
-              <div className="w-9 h-9 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-lg">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-base sm:text-lg shrink-0">
                 {settings.storeName.charAt(0)}
               </div>
             )}
-            <div>
-              <div className="flex items-center gap-1.5">
-                <a href="#" className="font-display font-bold text-sm sm:text-lg text-slate-900 tracking-tight leading-none">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1">
+                <a href="#" className="font-display font-extrabold text-xs sm:text-base md:text-lg text-slate-900 tracking-tight leading-none truncate max-w-[85px] xs:max-w-[120px] sm:max-w-[180px]">
                   {settings.storeName}
                 </a>
                 
                 {/* Auto-save cloud status badge */}
                 {isActualSeller && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 sm:px-2 py-0.5 rounded-full border border-emerald-200" title="Todos tus cambios se guardan automáticamente en tu cuenta">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <CloudCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    <span className="hidden xs:inline sm:inline">Autoguardado</span>
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200 shrink-0" title="Todos tus cambios se guardan automáticamente">
+                    <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                    <CloudCheck className="w-3.5 h-3.5 text-emerald-600 hidden xs:inline" />
+                    <span className="hidden sm:inline">Autoguardado</span>
                   </span>
                 )}
               </div>
-              <span className="text-[10px] sm:text-[11px] text-slate-500 font-medium block mt-0.5 truncate max-w-[140px] sm:max-w-none">
-                {currentSellerName ? (isActualSeller ? 'Administrador: Chihuahua' : `Cliente: ${currentSellerName}`) : 'Catálogo Oficial de Productos'}
+              <span className="text-[10px] text-slate-500 font-medium block mt-0.5 truncate max-w-[95px] xs:max-w-[130px] sm:max-w-none">
+                {currentSellerName ? (isActualSeller ? 'Admin: Chihuahua' : `${currentSellerName}`) : 'Catálogo Oficial'}
               </span>
             </div>
           </div>
 
-          {/* Zone 2: Catalog Switcher & Mode Toggle */}
+          {/* Zone 2: Catalog Switcher & Mode Toggle (Tablet/Desktop) */}
           {isActualSeller && (
             <div className="hidden md:flex items-center gap-2">
               {!isCustomerMode && (
@@ -149,27 +149,32 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           )}
 
-          {/* Zone 3: Seller Account & Actions */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Zone 3: Seller/Client Account & Actions */}
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             
             {/* Account Button */}
             {currentSellerName ? (
               <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
                 <button
                   onClick={onOpenLogin}
-                  className="px-2.5 py-1 text-xs font-bold text-slate-800 flex items-center gap-1.5 hover:bg-white rounded-lg transition-colors"
+                  className="px-1.5 sm:px-2.5 py-1 text-[11px] sm:text-xs font-bold text-slate-800 flex items-center gap-1 hover:bg-white rounded-lg transition-colors max-w-[85px] xs:max-w-[130px] sm:max-w-[180px] truncate"
                   title="Cambiar de cuenta o Iniciar sesión"
                 >
                   {userRole === 'seller' ? (
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                   ) : (
-                    <UserCheck className="w-3.5 h-3.5 text-sky-600" />
+                    <UserCheck className="w-3.5 h-3.5 text-sky-600 shrink-0" />
                   )}
-                  <span>{currentSellerName} {userRole === 'seller' ? '(Vendedor)' : '(Cliente)'}</span>
+                  <span className="truncate max-w-[45px] xs:max-w-[75px] sm:max-w-none">
+                    {currentSellerName}
+                  </span>
+                  <span className="hidden sm:inline text-[10px] text-slate-500 font-normal ml-0.5">
+                    {userRole === 'seller' ? '(Vendedor)' : ''}
+                  </span>
                 </button>
                 <button
                   onClick={onLogout}
-                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg transition-colors"
+                  className="p-1 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg transition-colors"
                   title="Cerrar sesión"
                 >
                   <LogOut className="w-3.5 h-3.5" />
@@ -178,9 +183,9 @@ export const Header: React.FC<HeaderProps> = ({
             ) : (
               <button
                 onClick={onOpenLogin}
-                className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5"
+                className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-[11px] sm:text-xs rounded-xl shadow-xs transition-all flex items-center gap-1"
               >
-                <LogIn className="w-4 h-4 text-emerald-400" />
+                <LogIn className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                 <span>Ingresar</span>
               </button>
             )}
@@ -188,12 +193,13 @@ export const Header: React.FC<HeaderProps> = ({
             {isCustomerMode ? (
               <button
                 onClick={onOpenCart}
-                className="relative px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2"
+                className="relative px-2 sm:px-4 py-1.5 sm:py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] sm:text-xs rounded-xl shadow-xs transition-all flex items-center gap-1 sm:gap-2 shrink-0"
               >
-                <ShoppingBag className="w-4 h-4" />
-                <span>Ver Pedido</span>
+                <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="hidden xs:inline">Ver Pedido</span>
+                <span className="xs:hidden">Pedido</span>
                 {cartCount > 0 && (
-                  <span className="bg-white text-emerald-700 font-bold px-1.5 py-0.2 text-[10px] rounded-full">
+                  <span className="bg-white text-emerald-700 font-extrabold px-1.5 py-0.5 text-[9px] sm:text-[10px] rounded-full shrink-0">
                     {cartCount}
                   </span>
                 )}
