@@ -1,0 +1,104 @@
+{
+  "entities": {
+    "Seller": {
+      "title": "Seller Account",
+      "description": "Seller profile details",
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "sellerId": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "username",
+        "sellerId"
+      ]
+    },
+    "StoreSettings": {
+      "title": "Store Settings",
+      "description": "Custom store branding, layout and contact details",
+      "type": "object",
+      "properties": {
+        "storeName": {
+          "type": "string"
+        },
+        "storeTagline": {
+          "type": "string"
+        },
+        "storeLogo": {
+          "type": "string"
+        },
+        "coverImage": {
+          "type": "string"
+        },
+        "whatsappNumber": {
+          "type": "string"
+        },
+        "instagramHandle": {
+          "type": "string"
+        },
+        "currencySymbol": {
+          "type": "string"
+        },
+        "themeColor": {
+          "type": "string"
+        },
+        "catalogLayout": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "storeName"
+      ]
+    },
+    "Catalog": {
+      "title": "Product Catalog",
+      "description": "Catalog containing products for a seller",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "products": {
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ]
+    }
+  },
+  "firestore": {
+    "/sellers/{sellerId}": {
+      "schema": "Seller",
+      "description": "Sellers account document"
+    },
+    "/sellers/{sellerId}/settings/current": {
+      "schema": "StoreSettings",
+      "description": "Seller store configuration"
+    },
+    "/sellers/{sellerId}/catalogs/{catalogId}": {
+      "schema": "Catalog",
+      "description": "Seller product catalogs"
+    }
+  }
+}

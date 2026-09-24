@@ -1,0 +1,6 @@
+{
+  "name": "CatálogoCraft - Creador de Catálogos para Tiendas",
+  "description": "Crea catálogos profesionales para tu tienda pegando enlaces de productos. Extracción automática de fotos, descripciones, precios y exportación a PDF o pedido por WhatsApp.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
