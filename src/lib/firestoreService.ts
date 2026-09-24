@@ -6,6 +6,7 @@ import {
   getDocs,
   onSnapshot,
   deleteDoc,
+  writeBatch,
   Unsubscribe,
 } from 'firebase/firestore';
 import {
@@ -204,21 +205,235 @@ export async function loadStoreSettingsFromFirestore(sellerId: string): Promise<
   }
 }
 
-// Save Catalog to Firestore under seller account
+// De-duplicates image base64 strings inside a Product to drastically reduce payload size before saving to Firestore.
+export function deDuplicateProduct(product: any): any {
+  if (!product) return product;
+  const copy = { ...product };
+
+  if (copy.imageDetails && Array.isArray(copy.imageDetails) && copy.imageDetails.length > 0) {
+    // 1. If primary image is in imageDetails, replace with sentinel
+    const detailIdx = copy.imageDetails.findIndex((d: any) => d && d.url === copy.image);
+    if (detailIdx !== -1) {
+      copy.image = `__SAME_AS_DETAIL_${detailIdx}__`;
+    }
+
+    // 2. Check if copy.images matches copy.imageDetails
+    if (Array.isArray(copy.images) && copy.images.length > 0) {
+      const detailsUrls = copy.imageDetails.map((d: any) => d?.url);
+      const isIdentical =
+        copy.images.length === detailsUrls.length &&
+        copy.images.every((url: any, idx: number) => url === detailsUrls[idx]);
+
+      if (isIdentical) {
+        copy.images = ["__SAME_AS_DETAILS__"];
+      } else {
+        copy.images = copy.images.map((url: any) => {
+          const match = detailsUrls.indexOf(url);
+          return match !== -1 ? `__DET_${match}__` : url;
+        });
+      }
+    }
+  } else if (Array.isArray(copy.images) && copy.images.length > 0) {
+    const imgIdx = copy.images.indexOf(copy.image);
+    if (imgIdx !== -1) {
+      copy.image = `__SAME_AS_IMAGE_${imgIdx}__`;
+    }
+  }
+
+  return copy;
+}
+
+// Restores duplicate image base64 strings inside a Product after fetching from Firestore.
+export function rehydrateProduct(product: any): any {
+  if (!product) return product;
+  const copy = { ...product };
+
+  if (copy.imageDetails && Array.isArray(copy.imageDetails) && copy.imageDetails.length > 0) {
+    // 1. Rehydrate images array
+    if (
+      Array.isArray(copy.images) &&
+      copy.images.length === 1 &&
+      copy.images[0] === "__SAME_AS_DETAILS__"
+    ) {
+      copy.images = copy.imageDetails.map((d: any) => d?.url || "");
+    } else if (Array.isArray(copy.images)) {
+      copy.images = copy.images.map((img: string) => {
+        if (typeof img === 'string' && img.startsWith("__DET_") && img.endsWith("__")) {
+          const idx = parseInt(img.replace("__DET_", "").replace("__", ""), 10);
+          return copy.imageDetails[idx]?.url || "";
+        }
+        return img;
+      });
+    }
+
+    // 2. Rehydrate primary image
+    if (typeof copy.image === 'string') {
+      if (copy.image === "__SAME_AS_DETAIL_0__") {
+        copy.image = copy.imageDetails[0]?.url || "";
+      } else if (copy.image.startsWith("__SAME_AS_DETAIL_") && copy.image.endsWith("__")) {
+        const idx = parseInt(copy.image.replace("__SAME_AS_DETAIL_", "").replace("__", ""), 10);
+        copy.image = copy.imageDetails[idx]?.url || copy.imageDetails[0]?.url || "";
+      }
+    }
+  } else if (Array.isArray(copy.images) && copy.images.length > 0) {
+    if (typeof copy.image === 'string' && copy.image.startsWith("__SAME_AS_IMAGE_") && copy.image.endsWith("__")) {
+      const idx = parseInt(copy.image.replace("__SAME_AS_IMAGE_", "").replace("__", ""), 10);
+      copy.image = copy.images[idx] || copy.images[0] || "";
+    }
+  }
+
+  // Safe fallback if primary image is empty
+  if (!copy.image) {
+    copy.image = copy.imageDetails?.[0]?.url || copy.images?.[0] || "";
+  }
+
+  return copy;
+}
+
+export function deDuplicateCatalog(catalog: Catalog): Catalog {
+  if (!catalog || !catalog.products) return catalog;
+  return {
+    ...catalog,
+    products: catalog.products.map(deDuplicateProduct),
+  };
+}
+
+export function rehydrateCatalog(catalog: Catalog): Catalog {
+  if (!catalog || !catalog.products) return catalog;
+  return {
+    ...catalog,
+    products: catalog.products.map(rehydrateProduct),
+  };
+}
+
+// Partition products into smaller batches so no single document exceeds 550KB,
+// enabling unlimited total catalog storage for high-resolution images in Firestore.
+export function partitionProductsIntoChunks(products: any[], maxChunkBytes = 550000): any[][] {
+  if (!products || products.length === 0) return [];
+  const chunks: any[][] = [];
+  let currentChunk: any[] = [];
+  let currentSize = 0;
+
+  for (const product of products) {
+    const prodSize = JSON.stringify(product).length;
+    if (currentChunk.length > 0 && currentSize + prodSize > maxChunkBytes) {
+      chunks.push(currentChunk);
+      currentChunk = [product];
+      currentSize = prodSize;
+    } else {
+      currentChunk.push(product);
+      currentSize += prodSize;
+    }
+  }
+
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk);
+  }
+
+  return chunks;
+}
+
+// Save Catalog to Firestore under seller account with atomic batch writes and chunking support
 export async function saveCatalogToFirestore(
   sellerId: string,
   catalog: Catalog
 ): Promise<void> {
   const path = `sellers/${sellerId}/catalogs/${catalog.id}`;
   try {
-    const optimized = optimizeImagesForFirestore(catalog);
-    const payload = sanitizeForFirestore({
-      ...optimized,
-      updatedAt: new Date().toISOString(),
+    const deDuplicated = deDuplicateCatalog(catalog);
+    const cleaned = sanitizeForFirestore(deDuplicated);
+
+    // Calculate serialized total size
+    const rawLength = JSON.stringify(cleaned).length;
+
+    // If total catalog size fits safely within a single document (< 650KB)
+    if (rawLength < 650000) {
+      const payload = {
+        ...cleaned,
+        isChunked: false,
+        chunkCount: 0,
+        updatedAt: new Date().toISOString(),
+      };
+      
+      const batch = writeBatch(db);
+      batch.set(doc(db, 'sellers', sellerId, 'catalogs', catalog.id), payload);
+      await batch.commit();
+
+      // Clean up any old chunks if previously chunked
+      getDocs(collection(db, 'sellers', sellerId, 'catalogs', catalog.id, 'chunks'))
+        .then((oldChunksSnap) => {
+          if (!oldChunksSnap.empty) {
+            const delBatch = writeBatch(db);
+            oldChunksSnap.docs.forEach((d) => delBatch.delete(d.ref));
+            return delBatch.commit();
+          }
+        })
+        .catch(() => {});
+      return;
+    }
+
+    // High-Resolution Chunked Storage (bypasses the 1MB single-document limit!)
+    // Each chunk is stored as a sub-document in /chunks/chunk_{i}
+    const chunks = partitionProductsIntoChunks(cleaned.products || [], 500000);
+
+    const batch = writeBatch(db);
+
+    // Add all chunks into the single batch
+    chunks.forEach((chunkProducts, i) => {
+      batch.set(
+        doc(db, 'sellers', sellerId, 'catalogs', catalog.id, 'chunks', `chunk_${i}`),
+        {
+          chunkIndex: i,
+          products: chunkProducts,
+          updatedAt: new Date().toISOString(),
+        }
+      );
     });
-    await setDoc(doc(db, 'sellers', sellerId, 'catalogs', catalog.id), payload);
+
+    // Save main catalog document (without heavy products array)
+    const mainPayload = {
+      id: catalog.id,
+      title: catalog.title,
+      description: catalog.description || '',
+      createdAt: catalog.createdAt,
+      updatedAt: new Date().toISOString(),
+      isChunked: true,
+      chunkCount: chunks.length,
+      productCount: cleaned.products?.length || 0,
+      products: [], // Heavy product data is safely stored in chunks!
+    };
+
+    batch.set(doc(db, 'sellers', sellerId, 'catalogs', catalog.id), mainPayload);
+
+    // Commit all chunks and main document atomically in a SINGLE network call!
+    await batch.commit();
+
+    // Clean up any extra old chunks if chunk count decreased
+    getDocs(collection(db, 'sellers', sellerId, 'catalogs', catalog.id, 'chunks'))
+      .then((existingChunksSnap) => {
+        const toDelete = existingChunksSnap.docs.filter((d) => {
+          const idx = parseInt(d.id.replace('chunk_', ''), 10);
+          return !isNaN(idx) && idx >= chunks.length;
+        });
+        if (toDelete.length > 0) {
+          const delBatch = writeBatch(db);
+          toDelete.forEach((d) => delBatch.delete(d.ref));
+          return delBatch.commit();
+        }
+      })
+      .catch(() => {});
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, path);
+  }
+}
+
+// Save All Catalogs sequentially to avoid overloading the WebChannel write stream
+export async function saveAllCatalogsToFirestore(
+  sellerId: string,
+  catalogs: Catalog[]
+): Promise<void> {
+  for (const cat of catalogs) {
+    await saveCatalogToFirestore(sellerId, cat);
   }
 }
 
@@ -229,13 +444,23 @@ export async function deleteCatalogFromFirestore(
 ): Promise<void> {
   const path = `sellers/${sellerId}/catalogs/${catalogId}`;
   try {
+    // Delete all chunks first if any
+    try {
+      const chunksSnap = await getDocs(
+        collection(db, 'sellers', sellerId, 'catalogs', catalogId, 'chunks')
+      );
+      if (!chunksSnap.empty) {
+        await Promise.all(chunksSnap.docs.map((d) => deleteDoc(d.ref)));
+      }
+    } catch {}
+
     await deleteDoc(doc(db, 'sellers', sellerId, 'catalogs', catalogId));
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, path);
   }
 }
 
-// Subscribe to all Catalogs for a seller
+// Subscribe to all Catalogs for a seller (transparently reassembles chunked high-res catalogs)
 export function subscribeToSellerCatalogs(
   sellerId: string,
   onData: (catalogs: Catalog[]) => void,
@@ -244,14 +469,43 @@ export function subscribeToSellerCatalogs(
   const path = `sellers/${sellerId}/catalogs`;
   return onSnapshot(
     collection(db, 'sellers', sellerId, 'catalogs'),
-    (snapshot) => {
-      const catalogs: Catalog[] = [];
-      snapshot.forEach((doc) => {
-        catalogs.push(doc.data() as Catalog);
-      });
-      // Sort by creation date or title
-      catalogs.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-      onData(catalogs);
+    async (snapshot) => {
+      try {
+        const catalogPromises = snapshot.docs.map(async (docSnap) => {
+          const rawCat = docSnap.data() as any;
+          if (rawCat.isChunked && rawCat.chunkCount > 0) {
+            try {
+              const chunkSnap = await getDocs(
+                collection(db, 'sellers', sellerId, 'catalogs', rawCat.id, 'chunks')
+              );
+              const chunkDocs = chunkSnap.docs.map((cd) => cd.data());
+              chunkDocs.sort((a, b) => (a.chunkIndex ?? 0) - (b.chunkIndex ?? 0));
+              const allProducts: any[] = [];
+              for (const cd of chunkDocs) {
+                if (Array.isArray(cd.products)) {
+                  allProducts.push(...cd.products);
+                }
+              }
+              return rehydrateCatalog({
+                ...rawCat,
+                products: allProducts,
+              });
+            } catch (chunkErr) {
+              console.error('Error fetching catalog chunks:', chunkErr);
+              return rehydrateCatalog(rawCat as Catalog);
+            }
+          } else {
+            return rehydrateCatalog(rawCat as Catalog);
+          }
+        });
+
+        const catalogs = await Promise.all(catalogPromises);
+        catalogs.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        onData(catalogs);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.LIST, path);
+        if (onError) onError(err);
+      }
     },
     (err) => {
       handleFirestoreError(err, OperationType.LIST, path);

@@ -21,7 +21,13 @@ interface ProductDetailModalProps {
   product: Product | null;
   settings: StoreSettings;
   onClose: () => void;
-  onAddToCart: (product: Product, selectedSize?: string, customUnitPrice?: number) => void;
+  onAddToCart: (
+    product: Product,
+    selectedSize?: string,
+    customUnitPrice?: number,
+    selectedImage?: string,
+    selectedImageCode?: string
+  ) => void;
   isCustomerMode?: boolean;
 }
 
@@ -78,6 +84,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     ) || null;
   }, [product, selectedSize]);
 
+  // Active selected image variant/detail
+  const activeImageDetail = React.useMemo(() => {
+    if (!product || !product.imageDetails || activeImageIndex < 0) return null;
+    const activeUrl = allImages[activeImageIndex];
+    if (!activeUrl) return null;
+    return product.imageDetails.find((d) => d.url === activeUrl) || product.imageDetails[activeImageIndex] || null;
+  }, [product, allImages, activeImageIndex]);
+
   if (!isOpen || !product) return null;
 
   const currentDisplayImage = allImages[activeImageIndex] || product.image;
@@ -85,7 +99,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const fallbackDisplay = getCategoryFallbackImage(`${product.title} ${product.description}`);
   const displayImage = isLogo ? fallbackDisplay : currentDisplayImage;
 
-  const currentPrice = activeVariant ? activeVariant.price : product.price;
+  // Image-specific price overrides size variant/base price if present
+  const currentPrice = activeImageDetail && activeImageDetail.price !== null && activeImageDetail.price !== undefined
+    ? activeImageDetail.price
+    : activeVariant
+    ? activeVariant.price
+    : product.price;
+
   const currentOriginalPrice = activeVariant && activeVariant.originalPrice !== undefined
     ? activeVariant.originalPrice
     : product.originalPrice;
@@ -107,7 +127,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     const cleanSourceLink = product.sourceUrl && product.sourceUrl.startsWith('http') ? product.sourceUrl : '';
     const linkToShow = cleanImageLink || cleanSourceLink;
 
-    const message = `Hola *${settings.storeName}*, me interesa este producto de su catálogo:\n\n📌 *${product.title}*\n📌 *Código:* ${product.sku || 'N/A'}\n💰 *Precio:* ${product.currency}${currentPrice.toFixed(2)}\n${
+    const codeText = activeImageDetail?.code ? `📸 *Modelo/Color:* ${activeImageDetail.code}\n` : '';
+
+    const message = `Hola *${settings.storeName}*, me interesa este producto de su catálogo:\n\n📌 *${product.title}*\n📌 *Código:* ${product.sku || 'N/A'}\n${codeText}💰 *Precio:* ${product.currency}${currentPrice.toFixed(2)}\n${
       selectedSize ? `📏 *Talla Elegida:* ${selectedSize}\n` : product.sizes ? `📏 *Tallas:* ${product.sizes}\n` : ''
     }${linkToShow ? `🔗 *Enlace:* ${linkToShow}\n` : ''}\n¿Tienen disponibilidad?`;
     
@@ -115,7 +137,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   };
 
   const copyProductDetails = () => {
-    const text = `🛍️ *${product.title}*\n📌 Código: ${product.sku || 'N/A'}\n💰 Precio: ${product.currency}${currentPrice.toFixed(
+    const codeText = activeImageDetail?.code ? `📸 Modelo/Color: ${activeImageDetail.code}\n` : '';
+    const text = `🛍️ *${product.title}*\n📌 Código: ${product.sku || 'N/A'}\n${codeText}💰 Precio: ${product.currency}${currentPrice.toFixed(
       2
     )}${
       currentOriginalPrice ? ` (Antes ${product.currency}${currentOriginalPrice.toFixed(2)})` : ''
@@ -128,7 +151,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   };
 
   const handleAdd = () => {
-    onAddToCart(product, selectedSize || undefined, currentPrice);
+    const selectedImgUrl = allImages[activeImageIndex] || product.image;
+    const selectedImgCode = activeImageDetail?.code || undefined;
+    onAddToCart(product, selectedSize || undefined, currentPrice, selectedImgUrl, selectedImgCode);
     setAddedToCartAnim(true);
     setTimeout(() => setAddedToCartAnim(false), 1500);
   };
@@ -215,19 +240,28 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             {/* Thumbnail Gallery Strip (Multi-Image) */}
             {allImages.length > 1 && (
               <div className="p-2.5 bg-slate-900/90 backdrop-blur-md border-t border-slate-800 flex items-center gap-2 overflow-x-auto scrollbar-none z-10">
-                {allImages.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveImageIndex(idx)}
-                    className={`w-12 h-12 rounded-xl overflow-hidden shrink-0 border-2 transition-all ${
-                      activeImageIndex === idx
-                        ? 'border-emerald-400 scale-105 shadow-md'
-                        : 'border-slate-700 opacity-60 hover:opacity-100'
-                    }`}
-                  >
-                    <img src={img} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
-                  </button>
-                ))}
+                {allImages.map((img, idx) => {
+                  const detail = product.imageDetails?.find((d) => d.url === img) || product.imageDetails?.[idx];
+                  const code = detail?.code;
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveImageIndex(idx)}
+                      className={`relative w-12 h-12 rounded-xl overflow-hidden shrink-0 border-2 transition-all ${
+                        activeImageIndex === idx
+                          ? 'border-emerald-400 scale-105 shadow-md'
+                          : 'border-slate-700 opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <img src={img} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
+                      {code && (
+                        <div className="absolute bottom-0 inset-x-0 bg-slate-950/80 text-[8px] text-white font-extrabold text-center py-0.5 uppercase truncate px-0.5 leading-none">
+                          {code}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -267,12 +301,30 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     {currentOriginalPrice.toFixed(2)}
                   </span>
                 )}
-                {activeVariant && (
+                {activeVariant && !activeImageDetail?.price && (
                   <span className="ml-auto text-[11px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-md border border-purple-200">
                     Precio para talla {selectedSize}
                   </span>
                 )}
+                {activeImageDetail && activeImageDetail.price !== null && activeImageDetail.price !== undefined && (
+                  <span className="ml-auto text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200 shadow-2xs">
+                    Precio por modelo
+                  </span>
+                )}
               </div>
+
+              {/* Selected Image Sub-Code Indicator */}
+              {activeImageDetail && activeImageDetail.code && (
+                <div className="mb-4 p-3 bg-emerald-50/80 border border-emerald-200/90 rounded-2xl flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+                    <Tag className="w-4 h-4 text-emerald-600" />
+                    <span>Modelo / Color Elegido:</span>
+                  </span>
+                  <span className="text-xs font-bold text-emerald-800 bg-white px-2.5 py-1 rounded-md border border-emerald-200 shadow-2xs uppercase">
+                    {activeImageDetail.code}
+                  </span>
+                </div>
+              )}
 
               {/* Interactive Size Selection Chips */}
               {sizesList.length > 0 && (

@@ -4,6 +4,12 @@ export interface SizeVariant {
   originalPrice?: number | null;
 }
 
+export interface ProductImageDetail {
+  url: string;
+  price?: number | null;
+  code?: string;
+}
+
 export interface Product {
   id: string;
   sku?: string;
@@ -12,6 +18,7 @@ export interface Product {
   description: string;
   image: string;
   images?: string[];
+  imageDetails?: ProductImageDetail[];
   price: number;
   originalPrice?: number | null;
   currency: string;
@@ -50,5 +57,7 @@ export interface CartItem {
   product: Product;
   quantity: number;
   selectedSize?: string;
+  selectedImage?: string;
+  selectedImageCode?: string;
   unitPrice?: number;
 }

@@ -36,6 +36,12 @@ service cloud.firestore {
       match /catalogs/{catalogId} {
         allow read: if true;
         allow write: if isSignedIn() && request.auth.uid == sellerId;
+
+        // Chunks subcollection for large high-resolution product images
+        match /chunks/{chunkId} {
+          allow read: if true;
+          allow write: if isSignedIn() && request.auth.uid == sellerId;
+        }
       }
     }
 

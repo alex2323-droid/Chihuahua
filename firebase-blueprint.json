@@ -77,6 +77,12 @@
         "updatedAt": {
           "type": "string"
         },
+        "isChunked": {
+          "type": "boolean"
+        },
+        "chunkCount": {
+          "type": "integer"
+        },
         "products": {
           "type": "array"
         }
@@ -84,6 +90,26 @@
       "required": [
         "id",
         "title"
+      ]
+    },
+    "CatalogChunk": {
+      "title": "Catalog Chunk",
+      "description": "Partitioned product document allowing unlimited high-resolution images beyond the 1MB single-document limit",
+      "type": "object",
+      "properties": {
+        "chunkIndex": {
+          "type": "integer"
+        },
+        "products": {
+          "type": "array"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "chunkIndex",
+        "products"
       ]
     },
     "Customer": {
@@ -125,6 +151,10 @@
     "/sellers/{sellerId}/catalogs/{catalogId}": {
       "schema": "Catalog",
       "description": "Seller product catalogs"
+    },
+    "/sellers/{sellerId}/catalogs/{catalogId}/chunks/{chunkId}": {
+      "schema": "CatalogChunk",
+      "description": "Sub-documents containing product partitions for high resolution image storage"
     },
     "/customers/{customerId}": {
       "schema": "Customer",

@@ -10,13 +10,14 @@ import { LoginModal } from './components/LoginModal';
 import { ProductDetailModal } from './components/ProductDetailModal';
 import { initialStoreSettings, initialCatalogs } from './data/initialData';
 import { Product, StoreSettings, Catalog, CartItem } from './types/catalog';
-import { isLogoUrl } from './utils/imageUtils';
+import { isLogoUrl, optimizeProductImageSize } from './utils/imageUtils';
 import {
   loginSeller,
   logoutSeller,
   subscribeToAuth,
   saveStoreSettingsToFirestore,
   saveCatalogToFirestore,
+  saveAllCatalogsToFirestore,
   subscribeToSellerCatalogs,
   subscribeToStoreSettings,
   loginCustomer,
@@ -93,6 +94,10 @@ export default function App() {
   const hasLoadedCatalogsFromCloud = useRef(false);
   const lastSavedSettingsRef = useRef<string>('');
   const lastSavedCatalogsRef = useRef<string>('');
+  const isRemoteCatalogUpdateRef = useRef(false);
+  const isRemoteSettingsUpdateRef = useRef(false);
+  const saveCatalogTimeoutRef = useRef<any>(null);
+  const saveSettingsTimeoutRef = useRef<any>(null);
   
   const sellerUid = sellerUser?.uid;
 
@@ -189,6 +194,7 @@ export default function App() {
     const unsubSettings = subscribeToStoreSettings(targetUid, (cloudSettings) => {
       if (cloudSettings) {
         const cloudStr = JSON.stringify(cloudSettings);
+        isRemoteSettingsUpdateRef.current = true;
         setSettings((prev) => {
           if (JSON.stringify(prev) === cloudStr) return prev;
           lastSavedSettingsRef.current = cloudStr;
@@ -202,6 +208,7 @@ export default function App() {
     const unsubCatalogs = subscribeToSellerCatalogs(targetUid, (cloudCatalogs) => {
       if (cloudCatalogs && cloudCatalogs.length > 0) {
         const cloudStr = JSON.stringify(cloudCatalogs);
+        isRemoteCatalogUpdateRef.current = true;
         setCatalogs((prev) => {
           if (JSON.stringify(prev) === cloudStr) return prev;
           lastSavedCatalogsRef.current = cloudStr;
@@ -223,38 +230,88 @@ export default function App() {
     };
   }, [activeViewingSellerUid, sellerUid]);
 
-  // 3. Auto-save all changes to Firestore on state modification
+  // 3. Auto-save all changes to Firestore on state modification with debouncing
   useEffect(() => {
     const settingsStr = JSON.stringify(settings);
     localStorage.setItem('catalogcraft_settings', settingsStr);
 
+    // If update arrived from cloud subscription, do not echo back
+    if (isRemoteSettingsUpdateRef.current) {
+      isRemoteSettingsUpdateRef.current = false;
+      lastSavedSettingsRef.current = settingsStr;
+      return;
+    }
+
     // Safeguard: Only auto-save if we are the seller owner AND data loading has fully completed
     if (sellerUid && sellerUid === activeViewingSellerUid && userRole === 'seller' && hasLoadedSettingsFromCloud.current) {
       if (lastSavedSettingsRef.current === settingsStr) return;
-      lastSavedSettingsRef.current = settingsStr;
 
-      setIsSyncing(true);
-      saveStoreSettingsToFirestore(sellerUid, settings)
-        .catch((err) => console.error('Cloud settings save error:', err))
-        .finally(() => setIsSyncing(false));
+      if (saveSettingsTimeoutRef.current) {
+        clearTimeout(saveSettingsTimeoutRef.current);
+      }
+
+      saveSettingsTimeoutRef.current = setTimeout(async () => {
+        lastSavedSettingsRef.current = settingsStr;
+        setIsSyncing(true);
+        try {
+          await saveStoreSettingsToFirestore(sellerUid, settings);
+        } catch (err) {
+          console.error('Cloud settings save error:', err);
+        } finally {
+          setIsSyncing(false);
+        }
+      }, 1000);
     }
+
+    return () => {
+      if (saveSettingsTimeoutRef.current) {
+        clearTimeout(saveSettingsTimeoutRef.current);
+      }
+    };
   }, [settings, sellerUid, activeViewingSellerUid, userRole]);
 
   useEffect(() => {
     const catalogsStr = JSON.stringify(catalogs);
-    localStorage.setItem('catalogcraft_catalogs', catalogsStr);
+    try {
+      localStorage.setItem('catalogcraft_catalogs', catalogsStr);
+    } catch {
+      // LocalStorage is limited to 5MB, high-res catalogs are safely persisted in Cloud Firestore
+    }
+
+    // If update arrived from cloud subscription, do not echo back
+    if (isRemoteCatalogUpdateRef.current) {
+      isRemoteCatalogUpdateRef.current = false;
+      lastSavedCatalogsRef.current = catalogsStr;
+      return;
+    }
 
     // Safeguard: Only auto-save if we are the seller owner AND data loading has fully completed
     if (sellerUid && sellerUid === activeViewingSellerUid && userRole === 'seller' && hasLoadedCatalogsFromCloud.current) {
       if (lastSavedCatalogsRef.current === catalogsStr) return;
-      lastSavedCatalogsRef.current = catalogsStr;
 
-      setIsSyncing(true);
-      // Persist all active catalogs to Firestore
-      Promise.all(catalogs.map((cat) => saveCatalogToFirestore(sellerUid, cat)))
-        .catch((err) => console.error('Cloud catalog save error:', err))
-        .finally(() => setIsSyncing(false));
+      if (saveCatalogTimeoutRef.current) {
+        clearTimeout(saveCatalogTimeoutRef.current);
+      }
+
+      // Debounce auto-save by 1500ms to consolidate user edits and prevent stream congestion
+      saveCatalogTimeoutRef.current = setTimeout(async () => {
+        lastSavedCatalogsRef.current = catalogsStr;
+        setIsSyncing(true);
+        try {
+          await saveAllCatalogsToFirestore(sellerUid, catalogs);
+        } catch (err) {
+          console.error('Cloud catalog save error:', err);
+        } finally {
+          setIsSyncing(false);
+        }
+      }, 1500);
     }
+
+    return () => {
+      if (saveCatalogTimeoutRef.current) {
+        clearTimeout(saveCatalogTimeoutRef.current);
+      }
+    };
   }, [catalogs, sellerUid, activeViewingSellerUid, userRole]);
 
   // Automatic cleanup effect: Fix products that had store logos saved previously
@@ -307,32 +364,73 @@ export default function App() {
     };
   }, []);
 
+  // Automatic cleanup & size optimization effect: Downscale and compress only historical massive uncompressed screenshots (> 2.5MB chars)
+  useEffect(() => {
+    if (catalogs.length === 0 || !hasLoadedCatalogsFromCloud.current) return;
+
+    // Only flag genuine raw uncompressed base64 data URIs (> 2.5 million characters)
+    const needsOptimization = catalogs.some((cat) =>
+      cat.products.some((p) =>
+        (p.image && typeof p.image === 'string' && p.image.startsWith('data:image') && p.image.length > 2500000) ||
+        (p.images && Array.isArray(p.images) && p.images.some((img) => typeof img === 'string' && img.startsWith('data:image') && img.length > 2500000)) ||
+        (p.imageDetails && Array.isArray(p.imageDetails) && p.imageDetails.some((det) => det && det.url && typeof det.url === 'string' && det.url.startsWith('data:image') && det.url.length > 2500000))
+      )
+    );
+
+    if (!needsOptimization) return;
+
+    let isMounted = true;
+    const runOnetimeOptimization = async () => {
+      const optimizedCatalogs = await Promise.all(
+        catalogs.map(async (cat) => {
+          const optProducts = await Promise.all(
+            cat.products.map(async (p) => {
+              return await optimizeProductImageSize(p);
+            })
+          );
+          return { ...cat, products: optProducts };
+        })
+      );
+
+      if (isMounted) {
+        setCatalogs(optimizedCatalogs);
+      }
+    };
+
+    runOnetimeOptimization();
+    return () => {
+      isMounted = false;
+    };
+  }, [catalogs, hasLoadedCatalogsFromCloud.current]);
+
   const activeCatalog = catalogs.find((c) => c.id === activeCatalogId) || catalogs[0];
 
   // Extraction handlers
-  const handleProductExtracted = (product: Product) => {
+  const handleProductExtracted = async (product: Product) => {
     const withSku = {
       ...product,
       sku: product.sku || 'CH-' + Math.floor(1000 + Math.random() * 9000),
     };
+    const optimized = await optimizeProductImageSize(withSku);
     setCatalogs((prevCatalogs) =>
       prevCatalogs.map((cat) =>
         cat.id === activeCatalogId
-          ? { ...cat, products: [withSku, ...cat.products] }
+          ? { ...cat, products: [optimized, ...cat.products] }
           : cat
       )
     );
   };
 
-  const handleBatchExtracted = (newProducts: Product[]) => {
+  const handleBatchExtracted = async (newProducts: Product[]) => {
     const withSkus = newProducts.map((p) => ({
       ...p,
       sku: p.sku || 'CH-' + Math.floor(1000 + Math.random() * 9000),
     }));
+    const optimized = await Promise.all(withSkus.map((p) => optimizeProductImageSize(p)));
     setCatalogs((prevCatalogs) =>
       prevCatalogs.map((cat) =>
         cat.id === activeCatalogId
-          ? { ...cat, products: [...withSkus, ...cat.products] }
+          ? { ...cat, products: [...optimized, ...cat.products] }
           : cat
       )
     );
@@ -361,23 +459,24 @@ export default function App() {
   };
 
   // Product CRUD
-  const handleSaveProduct = (updatedProduct: Product) => {
+  const handleSaveProduct = async (updatedProduct: Product) => {
+    const optimized = await optimizeProductImageSize(updatedProduct);
     setCatalogs((prevCatalogs) =>
       prevCatalogs.map((cat) => {
         if (cat.id !== activeCatalogId) return cat;
 
-        const exists = cat.products.some((p) => p.id === updatedProduct.id);
+        const exists = cat.products.some((p) => p.id === optimized.id);
         if (exists) {
           return {
             ...cat,
             products: cat.products.map((p) =>
-              p.id === updatedProduct.id ? updatedProduct : p
+              p.id === optimized.id ? optimized : p
             ),
           };
         } else {
           return {
             ...cat,
-            products: [updatedProduct, ...cat.products],
+            products: [optimized, ...cat.products],
           };
         }
       })
@@ -412,26 +511,55 @@ export default function App() {
   };
 
   // Cart operations
-  const handleAddToCart = (product: Product, selectedSize?: string, customUnitPrice?: number) => {
+  const handleAddToCart = (
+    product: Product,
+    selectedSize?: string,
+    customUnitPrice?: number,
+    selectedImage?: string,
+    selectedImageCode?: string
+  ) => {
     setCart((prev) => {
       const existing = prev.find(
-        (item) => item.product.id === product.id && item.selectedSize === selectedSize
+        (item) =>
+          item.product.id === product.id &&
+          item.selectedSize === selectedSize &&
+          item.selectedImageCode === selectedImageCode
       );
       if (existing) {
         return prev.map((item) =>
-          item.product.id === product.id && item.selectedSize === selectedSize
+          item.product.id === product.id &&
+          item.selectedSize === selectedSize &&
+          item.selectedImageCode === selectedImageCode
             ? { ...item, quantity: item.quantity + 1, unitPrice: customUnitPrice ?? item.unitPrice }
             : item
         );
       }
-      return [...prev, { product, quantity: 1, selectedSize, unitPrice: customUnitPrice }];
+      return [
+        ...prev,
+        {
+          product: {
+            ...product,
+            // Override the default thumbnail in the cart item if they selected a specific variant image!
+            image: selectedImage || product.image,
+          },
+          quantity: 1,
+          selectedSize,
+          selectedImage,
+          selectedImageCode,
+          unitPrice: customUnitPrice,
+        },
+      ];
     });
     setIsCartOpen(true);
   };
 
   const handleUpdateCartQuantity = (cartKey: string, quantity: number) => {
-    const getItemKey = (item: CartItem) =>
-      item.selectedSize ? `${item.product.id}_${item.selectedSize}` : item.product.id;
+    const getItemKey = (item: CartItem) => {
+      let key = item.product.id;
+      if (item.selectedSize) key += `_${item.selectedSize}`;
+      if (item.selectedImageCode) key += `_${item.selectedImageCode}`;
+      return key;
+    };
 
     if (quantity <= 0) {
       setCart((prev) => prev.filter((item) => getItemKey(item) !== cartKey));
@@ -445,8 +573,12 @@ export default function App() {
   };
 
   const handleRemoveFromCart = (cartKey: string) => {
-    const getItemKey = (item: CartItem) =>
-      item.selectedSize ? `${item.product.id}_${item.selectedSize}` : item.product.id;
+    const getItemKey = (item: CartItem) => {
+      let key = item.product.id;
+      if (item.selectedSize) key += `_${item.selectedSize}`;
+      if (item.selectedImageCode) key += `_${item.selectedImageCode}`;
+      return key;
+    };
     setCart((prev) => prev.filter((item) => getItemKey(item) !== cartKey));
   };
 

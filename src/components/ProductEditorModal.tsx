@@ -10,7 +10,7 @@ import {
   Trash2,
   Layers,
 } from 'lucide-react';
-import { Product, SizeVariant } from '../types/catalog';
+import { Product, SizeVariant, ProductImageDetail } from '../types/catalog';
 
 interface ProductEditorModalProps {
   product: Product | null;
@@ -43,6 +43,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
   const [selectedTone, setSelectedTone] = useState<'promotional' | 'luxury' | 'whatsapp'>('whatsapp');
 
   const [imageList, setImageList] = useState<string[]>([]);
+  const [imageDetailsList, setImageDetailsList] = useState<ProductImageDetail[]>([]);
   const [useCustomVariantPrices, setUseCustomVariantPrices] = useState(false);
   const [variantsList, setVariantsList] = useState<SizeVariant[]>([]);
 
@@ -56,6 +57,16 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
         ? product.images
         : (product.image ? [product.image] : []);
       setImageList(existingImages);
+
+      const existingDetails = product.imageDetails && product.imageDetails.length > 0
+        ? product.imageDetails
+        : existingImages.map(img => ({ url: img, price: null, code: '' }));
+      // Sync imageDetailsList with existingImages to maintain order and presence
+      const syncedDetails = existingImages.map(img => {
+        const found = existingDetails.find(d => d.url === img);
+        return found ? found : { url: img, price: null, code: '' };
+      });
+      setImageDetailsList(syncedDetails);
 
       if (product.sizeVariants && product.sizeVariants.length > 0) {
         setVariantsList(product.sizeVariants);
@@ -84,6 +95,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
         inStock: true,
       });
       setImageList([defaultImg]);
+      setImageDetailsList([{ url: defaultImg, price: null, code: '' }]);
       setVariantsList([]);
       setUseCustomVariantPrices(false);
     }
@@ -129,24 +141,67 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
     setUseCustomVariantPrices(true);
   };
 
+  const MAX_GALLERY_IMAGES = 10;
+
   const handleMultipleFilesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     const fileArray = Array.from(files);
-    let loadedCount = 0;
-    const newImages: string[] = [];
+    const currentLength = imageList.length;
+    const remainingSlots = MAX_GALLERY_IMAGES - currentLength;
 
-    fileArray.forEach((file) => {
+    if (remainingSlots <= 0) {
+      alert("Límite de 10 imágenes alcanzado para la galería de este producto.");
+      return;
+    }
+
+    const filesToLoad = fileArray.slice(0, remainingSlots);
+    if (fileArray.length > remainingSlots) {
+      alert(`Solo se cargarán ${remainingSlots} imágenes debido al límite máximo de 10.`);
+    }
+
+    let loadedCount = 0;
+    const loadedImages: string[] = new Array(filesToLoad.length);
+
+    filesToLoad.forEach((file, index) => {
       const reader = new FileReader();
       reader.onload = () => {
         if (reader.result) {
-          newImages.push(reader.result as string);
+          loadedImages[index] = reader.result as string;
         }
         loadedCount++;
-        if (loadedCount === fileArray.length) {
-          setImageList((prev) => {
-            const combined = [...prev, ...newImages];
+        if (loadedCount === filesToLoad.length) {
+          const filteredLoaded = loadedImages.filter(Boolean);
+          setImageList((current) => {
+            const combined = [...current, ...filteredLoaded].slice(0, MAX_GALLERY_IMAGES);
+            setImageDetailsList((currentDetails) => {
+              return combined.map((url) => {
+                const found = currentDetails.find((d) => d.url === url);
+                return found ? found : { url, price: null, code: '' };
+              });
+            });
+            setFormData((f) => ({
+              ...f,
+              image: combined[0] || '',
+              images: combined,
+            }));
+            return combined;
+          });
+        }
+      };
+      reader.onerror = () => {
+        loadedCount++;
+        if (loadedCount === filesToLoad.length) {
+          const filteredLoaded = loadedImages.filter(Boolean);
+          setImageList((current) => {
+            const combined = [...current, ...filteredLoaded].slice(0, MAX_GALLERY_IMAGES);
+            setImageDetailsList((currentDetails) => {
+              return combined.map((url) => {
+                const found = currentDetails.find((d) => d.url === url);
+                return found ? found : { url, price: null, code: '' };
+              });
+            });
             setFormData((f) => ({
               ...f,
               image: combined[0] || '',
@@ -164,7 +219,17 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
     if (!urlInput.trim()) return;
     const cleanUrl = urlInput.trim();
     setImageList((prev) => {
-      const updated = [...prev, cleanUrl];
+      if (prev.length >= MAX_GALLERY_IMAGES) {
+        alert("Límite de 10 imágenes alcanzado para la galería de este producto.");
+        return prev;
+      }
+      const updated = [...prev, cleanUrl].slice(0, MAX_GALLERY_IMAGES);
+      setImageDetailsList((currentDetails) => {
+        return updated.map((url) => {
+          const found = currentDetails.find((d) => d.url === url);
+          return found ? found : { url, price: null, code: '' };
+        });
+      });
       setFormData((f) => ({
         ...f,
         image: updated[0] || '',
@@ -180,6 +245,12 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
       const target = prev[index];
       const rest = prev.filter((_, i) => i !== index);
       const reordered = [target, ...rest];
+      setImageDetailsList((currentDetails) => {
+        return reordered.map((url) => {
+          const found = currentDetails.find((d) => d.url === url);
+          return found ? found : { url, price: null, code: '' };
+        });
+      });
       setFormData((f) => ({
         ...f,
         image: reordered[0],
@@ -192,6 +263,12 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
   const handleRemoveImage = (index: number) => {
     setImageList((prev) => {
       const updated = prev.filter((_, i) => i !== index);
+      setImageDetailsList((currentDetails) => {
+        return updated.map((url) => {
+          const found = currentDetails.find((d) => d.url === url);
+          return found ? found : { url, price: null, code: '' };
+        });
+      });
       setFormData((f) => ({
         ...f,
         image: updated[0] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80',
@@ -270,6 +347,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
       description: formData.description || '',
       image: finalImages[0],
       images: finalImages,
+      imageDetails: imageDetailsList,
       price: basePrice,
       originalPrice: formData.originalPrice ? Number(formData.originalPrice) : null,
       currency: formData.currency || '$',
@@ -591,7 +669,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
           <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-bold text-slate-800">
-                Galería de Imágenes del Producto ({imageList.length})
+                Galería de Imágenes del Producto ({imageList.length}/{MAX_GALLERY_IMAGES})
               </label>
               <label className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl cursor-pointer transition-colors flex items-center gap-1.5 shadow-2xs">
                 <Upload className="w-3.5 h-3.5" />
@@ -684,6 +762,68 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
             ) : (
               <div className="p-4 border border-dashed border-slate-300 rounded-xl text-center text-xs text-slate-400">
                 Aún no has agregado fotos. Sube imágenes desde tu teléfono o PC.
+              </div>
+            )}
+
+            {/* Custom Prices and Codes for Images Section */}
+            {imageList.length > 0 && (
+              <div className="pt-3 border-t border-slate-200 space-y-2">
+                <span className="text-[11px] font-bold text-slate-700 block uppercase tracking-wider">
+                  Precios y Sub-Códigos por Imagen (Opcional):
+                </span>
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  Si dejas el precio vacío, se usará el precio base del producto. El sub-código ayudará a identificar la foto seleccionada en los pedidos de WhatsApp (ej: "ROJO", "AZUL", "MODELO A").
+                </p>
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {imageDetailsList.map((detail, idx) => {
+                    return (
+                      <div key={idx} className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-xl shadow-3xs">
+                        <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-slate-100 bg-slate-50">
+                          {detail.url && detail.url.trim() !== '' ? (
+                            <img src={detail.url} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-slate-400 text-[10px]">No</div>
+                          )}
+                        </div>
+                        <div className="text-[11px] font-bold text-slate-600 w-12 truncate">
+                          Foto #{idx + 1} {idx === 0 && <span className="text-emerald-600 block text-[9px]">(Principal)</span>}
+                        </div>
+                        <div className="flex-1">
+                          <input
+                            type="text"
+                            placeholder="Sub-Código (Ej: Rojo, Azul...)"
+                            value={detail.code || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setImageDetailsList(current =>
+                                current.map((d, i) => i === idx ? { ...d, code: val } : d)
+                              );
+                            }}
+                            className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs outline-none focus:border-emerald-500 font-medium text-slate-800"
+                          />
+                        </div>
+                        <div className="w-24">
+                          <div className="relative">
+                            <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">$</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              placeholder="Precio"
+                              value={detail.price === null || detail.price === undefined ? '' : detail.price}
+                              onChange={(e) => {
+                                const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                                setImageDetailsList(current =>
+                                  current.map((d, i) => i === idx ? { ...d, price: val } : d)
+                                );
+                              }}
+                              className="w-full pl-4 pr-1 py-1 bg-slate-50 border border-slate-300 rounded-lg text-xs outline-none focus:border-emerald-500 font-semibold text-emerald-700"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>

@@ -67,8 +67,12 @@ export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
 
   const cleanPhone = settings.whatsappNumber.replace(/[^0-9]/g, '');
 
-  const getItemKey = (item: CartItem) =>
-    item.selectedSize ? `${item.product.id}_${item.selectedSize}` : item.product.id;
+  const getItemKey = (item: CartItem) => {
+    let key = item.product.id;
+    if (item.selectedSize) key += `_${item.selectedSize}`;
+    if (item.selectedImageCode) key += `_${item.selectedImageCode}`;
+    return key;
+  };
 
   const handleSendWhatsApp = () => {
     if (cart.length === 0) return;
@@ -78,9 +82,9 @@ export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
     cart.forEach((item, index) => {
       const itemPrice = item.unitPrice ?? item.product.price;
       const skuText = item.product.sku ? ` [Cód: ${item.product.sku}]` : '';
-      message += `${index + 1}. *${item.product.title}*${skuText}${
-        item.selectedSize ? ` 📏 (Talla: *${item.selectedSize}*)` : ''
-      }\n   Cantidad: ${item.quantity}x | Precio: ${
+      const sizeText = item.selectedSize ? ` 📏 (Talla: *${item.selectedSize}*)` : '';
+      const codeText = item.selectedImageCode ? ` 📸 (Modelo/Color: *${item.selectedImageCode}*)` : '';
+      message += `${index + 1}. *${item.product.title}*${skuText}${sizeText}${codeText}\n   Cantidad: ${item.quantity}x | Precio: ${
         item.product.currency
       }${(itemPrice * item.quantity).toFixed(2)}\n`;
     });
@@ -170,6 +174,11 @@ export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
                           {item.selectedSize && (
                             <span className="text-[9px] font-extrabold bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded border border-purple-200 leading-none shrink-0">
                               Talla: {item.selectedSize}
+                            </span>
+                          )}
+                          {item.selectedImageCode && (
+                            <span className="text-[9px] font-extrabold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-200 leading-none shrink-0 uppercase">
+                              Mod: {item.selectedImageCode}
                             </span>
                           )}
                         </div>

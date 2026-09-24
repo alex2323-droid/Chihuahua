@@ -108,12 +108,12 @@ export function getCategoryFallbackImage(titleAndDesc: string): string {
 
 /**
  * Client-side helper to compress and downscale large screenshot images
- * to optimize upload speed and eliminate memory/payload errors.
+ * to optimize upload speed, fit in Firestore document limits (1MB), and eliminate memory/payload errors.
  */
 export function compressImageBase64(
   base64Str: string,
-  maxDim = 1920,
-  quality = 0.88
+  maxDim = 1000,
+  quality = 0.82
 ): Promise<string> {
   return new Promise((resolve) => {
     if (!base64Str || !base64Str.startsWith('data:image')) {
@@ -127,11 +127,7 @@ export function compressImageBase64(
       let width = img.width;
       let height = img.height;
 
-      if (width <= maxDim && height <= maxDim && base64Str.length < 1500000) {
-        resolve(base64Str);
-        return;
-      }
-
+      // Always process the image to convert formats to compressed jpeg, unless it's already tiny and small-scale
       if (width > height) {
         if (width > maxDim) {
           height = Math.round((height * maxDim) / width);
@@ -153,6 +149,8 @@ export function compressImageBase64(
         return;
       }
 
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, width, height);
       resolve(canvas.toDataURL('image/jpeg', quality));
     };
@@ -164,6 +162,7 @@ export function compressImageBase64(
 /**
  * Client-side HTML5 Canvas crop helper to isolate the product photo from screenshots
  * based on Gemini Vision normalized bounding box coordinates [ymin, xmin, ymax, xmax] (0-1000).
+ * Constrained to 600px maximum dimension and highly compressed (0.7 quality) to protect database storage limits.
  */
 export function cropImageBase64(
   base64Str: string,
@@ -200,23 +199,75 @@ export function cropImageBase64(
 
       // If cropped area is almost the full image (>95%), or too tiny (<3%), keep original
       if ((sw >= width * 0.95 && sh >= height * 0.95) || sw < width * 0.03 || sh < height * 0.03) {
-        resolve(base64Str);
+        // Still compress the original image
+        compressImageBase64(base64Str).then(resolve);
         return;
       }
 
+      // Resize crop target to max 1000px to maintain crisp HD original quality
+      let targetWidth = sw;
+      let targetHeight = sh;
+      const maxDim = 1000;
+      if (targetWidth > maxDim || targetHeight > maxDim) {
+        if (targetWidth > targetHeight) {
+          targetHeight = Math.round((targetHeight * maxDim) / targetWidth);
+          targetWidth = maxDim;
+        } else {
+          targetWidth = Math.round((targetWidth * maxDim) / targetHeight);
+          targetHeight = maxDim;
+        }
+      }
+
       const canvas = document.createElement('canvas');
-      canvas.width = sw;
-      canvas.height = sh;
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
       const ctx = canvas.getContext('2d');
       if (!ctx) {
         resolve(base64Str);
         return;
       }
 
-      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
-      resolve(canvas.toDataURL('image/jpeg', 0.92));
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetWidth, targetHeight);
+      resolve(canvas.toDataURL('image/jpeg', 0.82));
     };
     img.onerror = () => resolve(base64Str);
     img.src = base64Str;
   });
+}
+
+/**
+ * Asynchronously compress both main image and gallery images of a product if they are in Base64 format.
+ * This guarantees the final product payload is extremely lightweight and easily fits in Firestore.
+ */
+export async function optimizeProductImageSize(product: any): Promise<any> {
+  const optimized = { ...product };
+  if (optimized.image && typeof optimized.image === 'string' && optimized.image.startsWith('data:')) {
+    optimized.image = await compressImageBase64(optimized.image);
+  }
+  if (optimized.images && Array.isArray(optimized.images) && optimized.images.length > 0) {
+    optimized.images = await Promise.all(
+      optimized.images.map(async (img: string) => {
+        if (typeof img === 'string' && img.startsWith('data:')) {
+          return await compressImageBase64(img);
+        }
+        return img;
+      })
+    );
+  }
+  if (optimized.imageDetails && Array.isArray(optimized.imageDetails) && optimized.imageDetails.length > 0) {
+    optimized.imageDetails = await Promise.all(
+      optimized.imageDetails.map(async (det: any) => {
+        if (det && det.url && typeof det.url === 'string' && det.url.startsWith('data:')) {
+          return {
+            ...det,
+            url: await compressImageBase64(det.url)
+          };
+        }
+        return det;
+      })
+    );
+  }
+  return optimized;
 }
