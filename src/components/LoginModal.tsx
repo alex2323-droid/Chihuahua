@@ -6,9 +6,11 @@ interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLoginSuccess: (username: string, role: 'seller' | 'customer') => void;
+  allowClose?: boolean;
+  isInline?: boolean;
 }
 
-export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps) {
+export function LoginModal({ isOpen, onClose, onLoginSuccess, allowClose = true, isInline = false }: LoginModalProps) {
   const [activeTab, setActiveTab] = useState<'seller' | 'customer'>('seller');
   const [username, setUsername] = useState('Chihuahua');
   const [password, setPassword] = useState('1306');
@@ -66,30 +68,31 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
     setError(null);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative overflow-hidden">
-        
-        {/* Top Decorative Header */}
-        <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600" />
+  const formContent = (
+    <div className={`bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative overflow-hidden ${isInline ? 'shadow-none border-0 p-0' : ''}`}>
+      
+      {/* Top Decorative Header */}
+      {!isInline && <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600" />}
 
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-              <LogIn className="w-6 h-6" />
-            </div>
-            <div>
-              <h2 className="font-display font-bold text-xl text-slate-900">Iniciar Sesión</h2>
-              <p className="text-xs text-slate-500">Elige tu tipo de cuenta para ingresar</p>
-            </div>
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+            <LogIn className="w-6 h-6" />
           </div>
+          <div>
+            <h2 className="font-display font-bold text-xl text-slate-900">Iniciar Sesión</h2>
+            <p className="text-xs text-slate-500">Elige tu tipo de cuenta para ingresar</p>
+          </div>
+        </div>
+        {allowClose && (
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-slate-600 text-sm font-semibold p-2 rounded-xl hover:bg-slate-100 transition-colors"
           >
             ✕
           </button>
-        </div>
+        )}
+      </div>
 
         {/* Unified Tab Selector */}
         <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-2xl mb-5">
@@ -225,6 +228,15 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
         </p>
 
       </div>
-    </div>
-  );
+    );
+
+    if (isInline) {
+      return formContent;
+    }
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+        {formContent}
+      </div>
+    );
 }

@@ -74,10 +74,10 @@ export default function App() {
   // Seller & Customer Auth State
   const [sellerUser, setSellerUser] = useState<User | null>(null);
   const [currentSellerName, setCurrentSellerName] = useState<string | null>(() => {
-    return localStorage.getItem('catalogcraft_username') || 'Chihuahua';
+    return localStorage.getItem('catalogcraft_username') || null;
   });
-  const [userRole, setUserRole] = useState<'seller' | 'customer'>(() => {
-    return (localStorage.getItem('catalogcraft_user_role') as 'seller' | 'customer') || 'seller';
+  const [userRole, setUserRole] = useState<'seller' | 'customer' | null>(() => {
+    return (localStorage.getItem('catalogcraft_user_role') as 'seller' | 'customer' | null) || null;
   });
 
   const [activeViewingSellerUid, setActiveViewingSellerUid] = useState<string>(() => {
@@ -159,30 +159,10 @@ export default function App() {
     localStorage.setItem('catalogcraft_viewing_seller_uid', uid);
   };
 
-  // 1. Boot Auto-Login for Pre-configured Account: Chihuahua / 1306
+  // 1. Subscribe to Firebase Auth
   useEffect(() => {
-    const autoLoginChihuahua = async () => {
-      // Only auto-login if the user doesn't have a saved session or is in seller role
-      const savedRole = localStorage.getItem('catalogcraft_user_role');
-      if (savedRole === 'customer') return;
-
-      try {
-        const res = await loginSeller('Chihuahua', '1306');
-        setSellerUser(res.user);
-        setCurrentSellerName(res.username);
-        setUserRole('seller');
-        localStorage.setItem('catalogcraft_username', 'Chihuahua');
-        localStorage.setItem('catalogcraft_user_role', 'seller');
-      } catch (err) {
-        console.warn('Auto-login notice:', err);
-      }
-    };
-
     const unsubscribe = subscribeToAuth((user) => {
       setSellerUser(user);
-      if (!user) {
-        autoLoginChihuahua();
-      }
     });
 
     return () => unsubscribe();
@@ -517,6 +497,45 @@ export default function App() {
     'grid-4': 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5',
     list: 'flex flex-col gap-4',
   }[layoutMode];
+
+  if (!currentSellerName) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 relative overflow-hidden font-sans">
+        {/* Decorative elements */}
+        <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 animate-pulse" />
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="max-w-md w-full text-center mb-8 z-10">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-emerald-500 text-slate-950 text-3xl font-display font-extrabold shadow-lg shadow-emerald-500/20 mb-4 animate-bounce" style={{ animationDuration: '3s' }}>
+            🐾
+          </div>
+          <h1 className="font-display font-extrabold text-3xl text-white tracking-tight">
+            {settings.storeName || 'Chihuahua Store'}
+          </h1>
+          <p className="text-slate-400 text-xs mt-2 max-w-xs mx-auto">
+            Bienvenido al catálogo oficial. Por favor inicia sesión como Cliente o Vendedor para continuar.
+          </p>
+        </div>
+
+        <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 relative z-10">
+          <LoginModal
+            isOpen={true}
+            onClose={() => {}}
+            onLoginSuccess={(name, role) => {
+              handleLoginSuccess(name, role);
+            }}
+            allowClose={false}
+            isInline={true}
+          />
+        </div>
+        
+        <div className="mt-8 text-center text-slate-500 text-[11px] z-10">
+          © {new Date().getFullYear()} · Catálogos Chihuahua
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
