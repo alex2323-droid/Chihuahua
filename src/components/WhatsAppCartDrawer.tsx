@@ -19,6 +19,8 @@ interface WhatsAppCartDrawerProps {
   onUpdateQuantity: (productId: string, quantity: number) => void;
   onRemoveItem: (productId: string) => void;
   onClearCart: () => void;
+  clientProfile?: any;
+  onUpdateClientProfile?: (profile: { username: string; address: string }) => void;
 }
 
 export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
@@ -29,11 +31,34 @@ export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
   onUpdateQuantity,
   onRemoveItem,
   onClearCart,
+  clientProfile = null,
+  onUpdateClientProfile,
 }) => {
   const [customerName, setCustomerName] = useState('');
   const [notes, setNotes] = useState('');
 
+  React.useEffect(() => {
+    if (clientProfile) {
+      setCustomerName(clientProfile.username || '');
+      setNotes(clientProfile.address || '');
+    }
+  }, [clientProfile]);
+
   if (!isOpen) return null;
+
+  const handleNameChange = (val: string) => {
+    setCustomerName(val);
+    if (onUpdateClientProfile) {
+      onUpdateClientProfile({ username: val, address: notes });
+    }
+  };
+
+  const handleNotesChange = (val: string) => {
+    setNotes(val);
+    if (onUpdateClientProfile) {
+      onUpdateClientProfile({ username: customerName, address: val });
+    }
+  };
 
   const totalAmount = cart.reduce((sum, item) => {
     const itemPrice = item.unitPrice ?? item.product.price;
@@ -196,7 +221,7 @@ export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
                     type="text"
                     placeholder="Ej: María López"
                     value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
+                    onChange={(e) => handleNameChange(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs outline-none focus:border-emerald-500"
                   />
                 </div>
@@ -209,7 +234,7 @@ export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
                     rows={2}
                     placeholder="Ej: Envío a domicilio o retiro en tienda..."
                     value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
+                    onChange={(e) => handleNotesChange(e.target.value)}
                     className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs outline-none focus:border-emerald-500"
                   />
                 </div>

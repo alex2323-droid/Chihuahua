@@ -24,19 +24,24 @@ service cloud.firestore {
     // Sellers root collection
     match /sellers/{sellerId} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == sellerId;
 
       // Store settings subcollection
       match /settings/{settingId} {
         allow read: if true;
-        allow write: if isSignedIn();
+        allow write: if isSignedIn() && request.auth.uid == sellerId;
       }
 
       // Catalogs subcollection
       match /catalogs/{catalogId} {
         allow read: if true;
-        allow write: if isSignedIn();
+        allow write: if isSignedIn() && request.auth.uid == sellerId;
       }
+    }
+
+    // Customers collection
+    match /customers/{customerId} {
+      allow read, write: if isSignedIn() && request.auth.uid == customerId;
     }
   }
 }

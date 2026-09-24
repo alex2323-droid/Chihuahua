@@ -19,6 +19,11 @@ import {
   saveCatalogToFirestore,
   subscribeToSellerCatalogs,
   subscribeToStoreSettings,
+  loginCustomer,
+  saveCustomerProfileToFirestore,
+  loadCustomerProfileFromFirestore,
+  getAllSellersFromFirestore,
+  CustomerProfile,
 } from './lib/firestoreService';
 import { User } from 'firebase/auth';
 import {
@@ -60,15 +65,34 @@ export default function App() {
 
   const [activeCatalogId, setActiveCatalogId] = useState<string>(() => catalogs[0]?.id || 'cat_principal');
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [isCustomerMode, setIsCustomerMode] = useState<boolean>(false);
+  const [isCustomerMode, setIsCustomerMode] = useState<boolean>(() => {
+    const savedRole = localStorage.getItem('catalogcraft_user_role');
+    return savedRole === 'customer';
+  });
 
-  // Seller Auth State
+  // Seller & Customer Auth State
   const [sellerUser, setSellerUser] = useState<User | null>(null);
-  const [currentSellerName, setCurrentSellerName] = useState<string | null>('Chihuahua');
+  const [currentSellerName, setCurrentSellerName] = useState<string | null>(() => {
+    return localStorage.getItem('catalogcraft_username') || 'Chihuahua';
+  });
+  const [userRole, setUserRole] = useState<'seller' | 'customer'>(() => {
+    return (localStorage.getItem('catalogcraft_user_role') as 'seller' | 'customer') || 'seller';
+  });
+
+  const [activeViewingSellerUid, setActiveViewingSellerUid] = useState<string>(() => {
+    return localStorage.getItem('catalogcraft_viewing_seller_uid') || '';
+  });
+  const [allSellers, setAllSellers] = useState<{ sellerId: string; username: string }[]>([]);
+  const [clientProfile, setClientProfile] = useState<CustomerProfile | null>(null);
+
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  const hasLoadedSettingsFromCloud = useRef(false);
+  const hasLoadedCatalogsFromCloud = useRef(false);
   const lastSavedSettingsRef = useRef<string>('');
   const lastSavedCatalogsRef = useRef<string>('');
+  
   const sellerUid = sellerUser?.uid;
 
   // Modals & Drawers state
@@ -80,8 +104,8 @@ export default function App() {
   const [selectedDetailProduct, setSelectedDetailProduct] = useState<Product | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  // Role calculation: Only 'Chihuahua' account has seller admin privileges
-  const isSeller = currentSellerName?.toLowerCase() === 'chihuahua';
+  // Role calculation
+  const isSeller = userRole === 'seller';
   const effectiveCustomerMode = !isSeller || isCustomerMode;
 
   // Filters & Search
@@ -90,13 +114,64 @@ export default function App() {
   const [layoutMode, setLayoutMode] = useState<'grid-3' | 'grid-2' | 'grid-4' | 'list'>('grid-3');
   const [copiedShareLink, setCopiedShareLink] = useState(false);
 
+  // 1. Fetch available sellers on boot and whenever login state changes
+  const refreshSellers = () => {
+    getAllSellersFromFirestore().then((sellers) => {
+      if (sellers && sellers.length > 0) {
+        setAllSellers(sellers);
+      }
+    });
+  };
+
+  useEffect(() => {
+    refreshSellers();
+  }, [sellerUid]);
+
+  // Load customer profile when logged in as a customer
+  useEffect(() => {
+    if (sellerUid && userRole === 'customer') {
+      loadCustomerProfileFromFirestore(sellerUid).then((profile) => {
+        if (profile) {
+          setClientProfile(profile);
+        }
+      });
+    } else {
+      setClientProfile(null);
+    }
+  }, [sellerUid, userRole]);
+
+  // Handler to update and save client profile details automatically on changes
+  const handleUpdateClientProfile = async (profileUpdate: { username: string; address: string }) => {
+    if (sellerUid && userRole === 'customer') {
+      const updated = {
+        ...clientProfile,
+        username: profileUpdate.username,
+        address: profileUpdate.address,
+      };
+      setClientProfile(updated as CustomerProfile);
+      await saveCustomerProfileToFirestore(sellerUid, updated);
+    }
+  };
+
+  const handleSwitchSeller = (uid: string) => {
+    setActiveViewingSellerUid(uid);
+    localStorage.setItem('catalogcraft_viewing_seller_uid', uid);
+  };
+
   // 1. Boot Auto-Login for Pre-configured Account: Chihuahua / 1306
   useEffect(() => {
     const autoLoginChihuahua = async () => {
+      // Only auto-login if the user doesn't have a saved session or is in seller role
+      const savedRole = localStorage.getItem('catalogcraft_user_role');
+      if (savedRole === 'customer') return;
+
       try {
         const res = await loginSeller('Chihuahua', '1306');
         setSellerUser(res.user);
         setCurrentSellerName(res.username);
+        setUserRole('seller');
+        localStorage.setItem('catalogcraft_username', 'Chihuahua');
+        localStorage.setItem('catalogcraft_user_role', 'seller');
       } catch (err) {
         console.warn('Auto-login notice:', err);
       }
@@ -105,7 +180,6 @@ export default function App() {
     const unsubscribe = subscribeToAuth((user) => {
       setSellerUser(user);
       if (!user) {
-        // Attempt login for preconfigured Chihuahua seller
         autoLoginChihuahua();
       }
     });
@@ -113,12 +187,25 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Real-time Firestore synchronization when seller is logged in
+  // Update activeViewingSellerUid when seller logs in
   useEffect(() => {
-    if (!sellerUid) return;
+    if (sellerUid && userRole === 'seller') {
+      setActiveViewingSellerUid(sellerUid);
+      localStorage.setItem('catalogcraft_viewing_seller_uid', sellerUid);
+    }
+  }, [sellerUid, userRole]);
+
+  // 2. Real-time Firestore synchronization when activeViewingSellerUid is configured
+  useEffect(() => {
+    const targetUid = activeViewingSellerUid || sellerUid;
+    if (!targetUid) return;
+
+    // Reset loaded states first to prevent race condition during switch
+    hasLoadedSettingsFromCloud.current = false;
+    hasLoadedCatalogsFromCloud.current = false;
 
     // Subscribe to cloud store settings
-    const unsubSettings = subscribeToStoreSettings(sellerUid, (cloudSettings) => {
+    const unsubSettings = subscribeToStoreSettings(targetUid, (cloudSettings) => {
       if (cloudSettings) {
         const cloudStr = JSON.stringify(cloudSettings);
         setSettings((prev) => {
@@ -127,10 +214,11 @@ export default function App() {
           return cloudSettings;
         });
       }
+      hasLoadedSettingsFromCloud.current = true;
     });
 
     // Subscribe to cloud catalogs
-    const unsubCatalogs = subscribeToSellerCatalogs(sellerUid, (cloudCatalogs) => {
+    const unsubCatalogs = subscribeToSellerCatalogs(targetUid, (cloudCatalogs) => {
       if (cloudCatalogs && cloudCatalogs.length > 0) {
         const cloudStr = JSON.stringify(cloudCatalogs);
         setCatalogs((prev) => {
@@ -145,20 +233,22 @@ export default function App() {
           return prev;
         });
       }
+      hasLoadedCatalogsFromCloud.current = true;
     });
 
     return () => {
       unsubSettings();
       unsubCatalogs();
     };
-  }, [sellerUid]);
+  }, [activeViewingSellerUid, sellerUid]);
 
   // 3. Auto-save all changes to Firestore on state modification
   useEffect(() => {
     const settingsStr = JSON.stringify(settings);
     localStorage.setItem('catalogcraft_settings', settingsStr);
 
-    if (sellerUid) {
+    // Safeguard: Only auto-save if we are the seller owner AND data loading has fully completed
+    if (sellerUid && sellerUid === activeViewingSellerUid && userRole === 'seller' && hasLoadedSettingsFromCloud.current) {
       if (lastSavedSettingsRef.current === settingsStr) return;
       lastSavedSettingsRef.current = settingsStr;
 
@@ -167,13 +257,14 @@ export default function App() {
         .catch((err) => console.error('Cloud settings save error:', err))
         .finally(() => setIsSyncing(false));
     }
-  }, [settings, sellerUid]);
+  }, [settings, sellerUid, activeViewingSellerUid, userRole]);
 
   useEffect(() => {
     const catalogsStr = JSON.stringify(catalogs);
     localStorage.setItem('catalogcraft_catalogs', catalogsStr);
 
-    if (sellerUid) {
+    // Safeguard: Only auto-save if we are the seller owner AND data loading has fully completed
+    if (sellerUid && sellerUid === activeViewingSellerUid && userRole === 'seller' && hasLoadedCatalogsFromCloud.current) {
       if (lastSavedCatalogsRef.current === catalogsStr) return;
       lastSavedCatalogsRef.current = catalogsStr;
 
@@ -183,7 +274,7 @@ export default function App() {
         .catch((err) => console.error('Cloud catalog save error:', err))
         .finally(() => setIsSyncing(false));
     }
-  }, [catalogs, sellerUid]);
+  }, [catalogs, sellerUid, activeViewingSellerUid, userRole]);
 
   // Automatic cleanup effect: Fix products that had store logos saved previously
   useEffect(() => {
@@ -375,6 +466,24 @@ export default function App() {
     await logoutSeller();
     setSellerUser(null);
     setCurrentSellerName(null);
+    setUserRole('seller');
+    localStorage.removeItem('catalogcraft_user_role');
+    localStorage.removeItem('catalogcraft_username');
+    setIsCustomerMode(false);
+    setActiveViewingSellerUid('');
+    localStorage.removeItem('catalogcraft_viewing_seller_uid');
+  };
+
+  const handleLoginSuccess = (username: string, role: 'seller' | 'customer') => {
+    setCurrentSellerName(username);
+    setUserRole(role);
+    localStorage.setItem('catalogcraft_username', username);
+    localStorage.setItem('catalogcraft_user_role', role);
+    if (role === 'customer') {
+      setIsCustomerMode(true);
+    } else {
+      setIsCustomerMode(false);
+    }
   };
 
   // Filter products
@@ -429,6 +538,7 @@ export default function App() {
         onOpenLogin={() => setIsLoginOpen(true)}
         onLogout={handleLogoutSeller}
         isSyncing={isSyncing}
+        userRole={userRole}
       />
 
       {/* Main Content Area */}
@@ -752,8 +862,8 @@ export default function App() {
       <LoginModal
         isOpen={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
-        onLoginSuccess={(name) => {
-          setCurrentSellerName(name);
+        onLoginSuccess={(name, role) => {
+          handleLoginSuccess(name, role);
         }}
       />
 
@@ -789,6 +899,8 @@ export default function App() {
         onUpdateQuantity={handleUpdateCartQuantity}
         onRemoveItem={handleRemoveFromCart}
         onClearCart={() => setCart([])}
+        clientProfile={clientProfile}
+        onUpdateClientProfile={handleUpdateClientProfile}
       />
 
       <ProductDetailModal

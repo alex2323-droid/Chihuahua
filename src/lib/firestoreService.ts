@@ -263,7 +263,7 @@ export function subscribeToSellerCatalogs(
 // Subscribe to Store Settings for a seller
 export function subscribeToStoreSettings(
   sellerId: string,
-  onData: (settings: StoreSettings) => void
+  onData: (settings: StoreSettings | null) => void
 ): Unsubscribe {
   const path = `sellers/${sellerId}/settings/current`;
   return onSnapshot(
@@ -271,10 +271,112 @@ export function subscribeToStoreSettings(
     (snapshot) => {
       if (snapshot.exists()) {
         onData(snapshot.data() as StoreSettings);
+      } else {
+        onData(null);
       }
     },
     (err) => {
       handleFirestoreError(err, OperationType.GET, path);
     }
   );
+}
+
+export interface CustomerProfile {
+  customerId: string;
+  username: string;
+  email: string;
+  whatsapp?: string;
+  address?: string;
+  createdAt: string;
+}
+
+// Convert human customer username to internal email
+export function formatCustomerUsernameToEmail(username: string): string {
+  const clean = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+  return `${clean || 'client'}@client.internal`;
+}
+
+// Customer Auth Handler
+export async function loginCustomer(username: string, rawPassword: string): Promise<{ user: User; username: string }> {
+  const email = formatCustomerUsernameToEmail(username);
+  const password = formatPasswordForFirebase(rawPassword);
+
+  try {
+    const userCred = await signInWithEmailAndPassword(auth, email, password);
+    return { user: userCred.user, username: username.trim() };
+  } catch (err: any) {
+    if (
+      err.code === 'auth/user-not-found' ||
+      err.code === 'auth/invalid-credential' ||
+      err.code === 'auth/invalid-email'
+    ) {
+      try {
+        const newCred = await createUserWithEmailAndPassword(auth, email, password);
+        await setDoc(doc(db, 'customers', newCred.user.uid), {
+          username: username.trim(),
+          customerId: newCred.user.uid,
+          createdAt: new Date().toISOString(),
+        });
+        return { user: newCred.user, username: username.trim() };
+      } catch (createErr: any) {
+        throw new Error('Error al registrar cliente en la base de datos: ' + createErr.message);
+      }
+    }
+    throw new Error('Contraseña o usuario incorrecto.');
+  }
+}
+
+// Save Customer Profile
+export async function saveCustomerProfileToFirestore(
+  customerId: string,
+  profile: Partial<CustomerProfile>
+): Promise<void> {
+  const path = `customers/${customerId}`;
+  try {
+    const payload = sanitizeForFirestore({
+      ...profile,
+      customerId,
+      updatedAt: new Date().toISOString(),
+    });
+    await setDoc(doc(db, 'customers', customerId), payload, { merge: true });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, path);
+  }
+}
+
+// Load Customer Profile
+export async function loadCustomerProfileFromFirestore(customerId: string): Promise<CustomerProfile | null> {
+  const path = `customers/${customerId}`;
+  try {
+    const snap = await getDoc(doc(db, 'customers', customerId));
+    if (snap.exists()) {
+      return snap.data() as CustomerProfile;
+    }
+    return null;
+  } catch (err) {
+    handleFirestoreError(err, OperationType.GET, path);
+    return null;
+  }
+}
+
+// Get all active sellers/stores in the system so customers can browse catalogs
+export async function getAllSellersFromFirestore(): Promise<{ sellerId: string; username: string }[]> {
+  const path = 'sellers';
+  try {
+    const snap = await getDocs(collection(db, 'sellers'));
+    const sellers: { sellerId: string; username: string }[] = [];
+    snap.forEach((doc) => {
+      const data = doc.data();
+      if (data.username && data.sellerId) {
+        sellers.push({
+          sellerId: data.sellerId,
+          username: data.username,
+        });
+      }
+    });
+    return sellers;
+  } catch (err) {
+    handleFirestoreError(err, OperationType.LIST, path);
+    return [];
+  }
 }

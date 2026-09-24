@@ -85,6 +85,32 @@
         "id",
         "title"
       ]
+    },
+    "Customer": {
+      "title": "Customer Profile",
+      "description": "Customer account details and delivery address details",
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "customerId": {
+          "type": "string"
+        },
+        "whatsapp": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "username",
+        "customerId"
+      ]
     }
   },
   "firestore": {
@@ -99,6 +125,10 @@
     "/sellers/{sellerId}/catalogs/{catalogId}": {
       "schema": "Catalog",
       "description": "Seller product catalogs"
+    },
+    "/customers/{customerId}": {
+      "schema": "Customer",
+      "description": "Customer profile and delivery details"
     }
   }
 }
