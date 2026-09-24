@@ -296,7 +296,54 @@ export function formatCustomerUsernameToEmail(username: string): string {
   return `${clean || 'client'}@client.internal`;
 }
 
-// Customer Auth Handler
+// Customer Auth Handler (Strict login and registration)
+export async function signInCustomer(username: string, rawPassword: string): Promise<{ user: User; username: string }> {
+  const email = formatCustomerUsernameToEmail(username);
+  const password = formatPasswordForFirebase(rawPassword);
+
+  try {
+    const userCred = await signInWithEmailAndPassword(auth, email, password);
+    return { user: userCred.user, username: username.trim() };
+  } catch (err: any) {
+    if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+      throw new Error('Usuario o contraseña incorrectos. Si no tienes una cuenta, por favor regístrate.');
+    }
+    throw new Error(err.message || 'Error al iniciar sesión.');
+  }
+}
+
+export async function registerCustomer(username: string, rawPassword: string): Promise<{ user: User; username: string }> {
+  const clean = username.trim();
+  if (clean.toLowerCase() === 'chihuahua') {
+    throw new Error('El nombre de usuario "Chihuahua" está reservado para el administrador.');
+  }
+  if (clean.length < 3) {
+    throw new Error('El nombre de usuario debe tener al menos 3 caracteres.');
+  }
+  if (rawPassword.length < 6) {
+    throw new Error('La contraseña debe tener al menos 6 caracteres.');
+  }
+
+  const email = formatCustomerUsernameToEmail(username);
+  const password = formatPasswordForFirebase(rawPassword);
+
+  try {
+    const newCred = await createUserWithEmailAndPassword(auth, email, password);
+    await setDoc(doc(db, 'customers', newCred.user.uid), {
+      username: clean,
+      customerId: newCred.user.uid,
+      createdAt: new Date().toISOString(),
+    });
+    return { user: newCred.user, username: clean };
+  } catch (err: any) {
+    if (err.code === 'auth/email-already-in-use') {
+      throw new Error('El nombre de usuario ya está registrado. Por favor, inicia sesión.');
+    }
+    throw new Error(err.message || 'Error al registrarse.');
+  }
+}
+
+// Legacy Customer Auth Handler (fallback)
 export async function loginCustomer(username: string, rawPassword: string): Promise<{ user: User; username: string }> {
   const email = formatCustomerUsernameToEmail(username);
   const password = formatPasswordForFirebase(rawPassword);
