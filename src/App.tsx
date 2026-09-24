@@ -24,6 +24,7 @@ import {
   saveCustomerProfileToFirestore,
   loadCustomerProfileFromFirestore,
   getAllSellersFromFirestore,
+  getPrimarySellerIdFromFirestore,
   CustomerProfile,
 } from './lib/firestoreService';
 import { User } from 'firebase/auth';
@@ -82,7 +83,15 @@ export default function App() {
   });
 
   const [activeViewingSellerUid, setActiveViewingSellerUid] = useState<string>(() => {
-    return localStorage.getItem('catalogcraft_viewing_seller_uid') || '';
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlSeller = params.get('seller') || params.get('store');
+      if (urlSeller) {
+        localStorage.setItem('catalogcraft_viewing_seller_uid', urlSeller);
+        return urlSeller;
+      }
+    }
+    return localStorage.getItem('catalogcraft_viewing_seller_uid') || 'bdy3TcO5IAOpmkQEy8zLGpEkENG3';
   });
   const [allSellers, setAllSellers] = useState<{ sellerId: string; username: string }[]>([]);
   const [clientProfile, setClientProfile] = useState<CustomerProfile | null>(null);
@@ -121,12 +130,28 @@ export default function App() {
   const [copiedShareLink, setCopiedShareLink] = useState(false);
 
   // 1. Fetch available sellers on boot and whenever login state changes
-  const refreshSellers = () => {
-    getAllSellersFromFirestore().then((sellers) => {
+  const refreshSellers = async () => {
+    try {
+      const sellers = await getAllSellersFromFirestore();
       if (sellers && sellers.length > 0) {
         setAllSellers(sellers);
+        if (!isSeller) {
+          const chih = sellers.find((s) => s.username.toLowerCase() === 'chihuahua') || sellers[0];
+          if (chih && (!activeViewingSellerUid || activeViewingSellerUid === '')) {
+            setActiveViewingSellerUid(chih.sellerId);
+            localStorage.setItem('catalogcraft_viewing_seller_uid', chih.sellerId);
+          }
+        }
+      } else {
+        const primaryId = await getPrimarySellerIdFromFirestore();
+        if (primaryId && (!activeViewingSellerUid || activeViewingSellerUid === '') && !isSeller) {
+          setActiveViewingSellerUid(primaryId);
+          localStorage.setItem('catalogcraft_viewing_seller_uid', primaryId);
+        }
       }
-    });
+    } catch (e) {
+      console.warn('Could not refresh sellers:', e);
+    }
   };
 
   useEffect(() => {
@@ -175,15 +200,20 @@ export default function App() {
 
   // Update activeViewingSellerUid when seller logs in
   useEffect(() => {
-    if (sellerUid && userRole === 'seller') {
+    if (sellerUid && userRole === 'seller' && currentSellerName === 'Chihuahua') {
       setActiveViewingSellerUid(sellerUid);
       localStorage.setItem('catalogcraft_viewing_seller_uid', sellerUid);
     }
-  }, [sellerUid, userRole]);
+  }, [sellerUid, userRole, currentSellerName]);
 
-  // 2. Real-time Firestore synchronization when activeViewingSellerUid is configured
+  // 2. Real-time Firestore synchronization
   useEffect(() => {
-    const targetUid = activeViewingSellerUid || sellerUid;
+    // When logged in as Chihuahua (the seller), bind to Chihuahua's account
+    // When customer or visitor, always bind to Chihuahua / primary store account
+    const targetUid = isSeller && sellerUid
+      ? sellerUid
+      : (activeViewingSellerUid || 'bdy3TcO5IAOpmkQEy8zLGpEkENG3');
+
     if (!targetUid) return;
 
     // Reset loaded states first to prevent race condition during switch
@@ -209,11 +239,7 @@ export default function App() {
       if (cloudCatalogs && cloudCatalogs.length > 0) {
         const cloudStr = JSON.stringify(cloudCatalogs);
         isRemoteCatalogUpdateRef.current = true;
-        setCatalogs((prev) => {
-          if (JSON.stringify(prev) === cloudStr) return prev;
-          lastSavedCatalogsRef.current = cloudStr;
-          return cloudCatalogs;
-        });
+        setCatalogs(cloudCatalogs);
         setActiveCatalogId((prev) => {
           if (!prev || !cloudCatalogs.some((c) => c.id === prev)) {
             return cloudCatalogs[0].id;
@@ -228,7 +254,7 @@ export default function App() {
       unsubSettings();
       unsubCatalogs();
     };
-  }, [activeViewingSellerUid, sellerUid]);
+  }, [activeViewingSellerUid, sellerUid, isSeller]);
 
   // 3. Auto-save all changes to Firestore on state modification with debouncing
   useEffect(() => {
@@ -242,8 +268,8 @@ export default function App() {
       return;
     }
 
-    // Safeguard: Only auto-save if we are the seller owner AND data loading has fully completed
-    if (sellerUid && sellerUid === activeViewingSellerUid && userRole === 'seller' && hasLoadedSettingsFromCloud.current) {
+    // Safeguard: Only auto-save if we are the verified seller owner AND data loading has fully completed
+    if (isSeller && sellerUid && hasLoadedSettingsFromCloud.current) {
       if (lastSavedSettingsRef.current === settingsStr) return;
 
       if (saveSettingsTimeoutRef.current) {
@@ -268,7 +294,7 @@ export default function App() {
         clearTimeout(saveSettingsTimeoutRef.current);
       }
     };
-  }, [settings, sellerUid, activeViewingSellerUid, userRole]);
+  }, [settings, sellerUid, isSeller]);
 
   useEffect(() => {
     const catalogsStr = JSON.stringify(catalogs);
@@ -285,8 +311,8 @@ export default function App() {
       return;
     }
 
-    // Safeguard: Only auto-save if we are the seller owner AND data loading has fully completed
-    if (sellerUid && sellerUid === activeViewingSellerUid && userRole === 'seller' && hasLoadedCatalogsFromCloud.current) {
+    // Safeguard: Only auto-save if we are the verified seller owner AND data loading has fully completed
+    if (isSeller && sellerUid && hasLoadedCatalogsFromCloud.current) {
       if (lastSavedCatalogsRef.current === catalogsStr) return;
 
       if (saveCatalogTimeoutRef.current) {
@@ -312,7 +338,7 @@ export default function App() {
         clearTimeout(saveCatalogTimeoutRef.current);
       }
     };
-  }, [catalogs, sellerUid, activeViewingSellerUid, userRole]);
+  }, [catalogs, sellerUid, isSeller]);
 
   // Automatic cleanup effect: Fix products that had store logos saved previously
   useEffect(() => {
@@ -626,7 +652,10 @@ export default function App() {
   };
 
   const copyShareableLink = () => {
-    navigator.clipboard.writeText(window.location.href);
+    const url = new URL(window.location.href);
+    const target = (isSeller && sellerUid) || activeViewingSellerUid || 'bdy3TcO5IAOpmkQEy8zLGpEkENG3';
+    url.searchParams.set('seller', target);
+    navigator.clipboard.writeText(url.toString());
     setCopiedShareLink(true);
     setTimeout(() => setCopiedShareLink(false), 2000);
   };

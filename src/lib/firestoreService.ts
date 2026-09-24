@@ -83,6 +83,12 @@ export async function loginSeller(username: string, rawPassword: string): Promis
   try {
     // Try signing in
     const userCred = await signInWithEmailAndPassword(auth, email, password);
+    try {
+      await setDoc(doc(db, 'sellers', userCred.user.uid), {
+        username: username.trim(),
+        sellerId: userCred.user.uid,
+      }, { merge: true });
+    } catch {}
     return { user: userCred.user, username: username.trim() };
   } catch (err: any) {
     // If user not found, create new account automatically
@@ -721,16 +727,30 @@ export async function getAllSellersFromFirestore(): Promise<{ sellerId: string; 
     const sellers: { sellerId: string; username: string }[] = [];
     snap.forEach((doc) => {
       const data = doc.data();
-      if (data.username && data.sellerId) {
-        sellers.push({
-          sellerId: data.sellerId,
-          username: data.username,
-        });
-      }
+      const sId = data.sellerId || doc.id;
+      const uName = data.username || (doc.id === 'bdy3TcO5IAOpmkQEy8zLGpEkENG3' ? 'Chihuahua' : 'Tienda');
+      sellers.push({
+        sellerId: sId,
+        username: uName,
+      });
     });
     return sellers;
   } catch (err) {
     handleFirestoreError(err, OperationType.LIST, path);
     return [];
   }
+}
+
+// Get the default primary store seller ID (Chihuahua) for customer browsing
+export async function getPrimarySellerIdFromFirestore(): Promise<string> {
+  const KNOWN_CHIHUAHUA_UID = 'bdy3TcO5IAOpmkQEy8zLGpEkENG3';
+  try {
+    const sellers = await getAllSellersFromFirestore();
+    if (sellers.length > 0) {
+      const chih = sellers.find((s) => s.username.toLowerCase() === 'chihuahua');
+      if (chih) return chih.sellerId;
+      return sellers[0].sellerId;
+    }
+  } catch {}
+  return KNOWN_CHIHUAHUA_UID;
 }
