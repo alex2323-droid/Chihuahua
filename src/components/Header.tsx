@@ -151,14 +151,18 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Account Button */}
             {currentSellerName ? (
               <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-                <div className="px-2.5 py-1 text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <button
+                  onClick={onOpenLogin}
+                  className="px-2.5 py-1 text-xs font-bold text-slate-800 flex items-center gap-1.5 hover:bg-white rounded-lg transition-colors"
+                  title="Cambiar de cuenta o Iniciar sesión"
+                >
                   {userRole === 'seller' ? (
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                   ) : (
                     <UserCheck className="w-3.5 h-3.5 text-sky-600" />
                   )}
                   <span>{currentSellerName} {userRole === 'seller' ? '(Vendedor)' : '(Cliente)'}</span>
-                </div>
+                </button>
                 <button
                   onClick={onLogout}
                   className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg transition-colors"
