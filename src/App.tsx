@@ -50,7 +50,6 @@ import {
   Settings,
   ShoppingBag,
   LogIn,
-  Loader2,
 } from 'lucide-react';
 
 export default function App() {
@@ -74,8 +73,12 @@ export default function App() {
 
   // Seller & Customer Auth State
   const [sellerUser, setSellerUser] = useState<User | null>(null);
-  const [currentSellerName, setCurrentSellerName] = useState<string | null>(null);
-  const [userRole, setUserRole] = useState<'seller' | 'customer' | null>(null);
+  const [currentSellerName, setCurrentSellerName] = useState<string | null>(() => {
+    return localStorage.getItem('catalogcraft_username') || null;
+  });
+  const [userRole, setUserRole] = useState<'seller' | 'customer' | null>(() => {
+    return (localStorage.getItem('catalogcraft_user_role') as 'seller' | 'customer' | null) || null;
+  });
 
   const [activeViewingSellerUid, setActiveViewingSellerUid] = useState<string>(() => {
     return localStorage.getItem('catalogcraft_viewing_seller_uid') || '';
@@ -156,42 +159,10 @@ export default function App() {
     localStorage.setItem('catalogcraft_viewing_seller_uid', uid);
   };
 
-  const [authInitialized, setAuthInitialized] = useState(false);
-
   // 1. Subscribe to Firebase Auth
   useEffect(() => {
     const unsubscribe = subscribeToAuth((user) => {
       setSellerUser(user);
-      if (user) {
-        const storedUsername = localStorage.getItem('catalogcraft_username');
-        const storedRole = localStorage.getItem('catalogcraft_user_role') as 'seller' | 'customer' | null;
-        
-        if (storedUsername && storedRole) {
-          setCurrentSellerName(storedUsername);
-          setUserRole(storedRole);
-        } else {
-          if (user.email?.endsWith('@catalogcraft.internal')) {
-            const derivedName = user.email.split('@')[0];
-            const nameCapitalized = derivedName.charAt(0).toUpperCase() + derivedName.slice(1);
-            setCurrentSellerName(nameCapitalized);
-            setUserRole('seller');
-            localStorage.setItem('catalogcraft_username', nameCapitalized);
-            localStorage.setItem('catalogcraft_user_role', 'seller');
-          } else {
-            const derivedName = user.email?.split('@')[0] || 'Cliente';
-            setCurrentSellerName(derivedName);
-            setUserRole('customer');
-            localStorage.setItem('catalogcraft_username', derivedName);
-            localStorage.setItem('catalogcraft_user_role', 'customer');
-          }
-        }
-      } else {
-        setCurrentSellerName(null);
-        setUserRole(null);
-        localStorage.removeItem('catalogcraft_username');
-        localStorage.removeItem('catalogcraft_user_role');
-      }
-      setAuthInitialized(true);
     });
 
     return () => unsubscribe();
@@ -526,23 +497,6 @@ export default function App() {
     'grid-4': 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5',
     list: 'flex flex-col gap-4',
   }[layoutMode];
-
-  // If Firebase Auth is still initializing, display a clean loader
-  if (!authInitialized) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-emerald-500 text-slate-950 text-3xl font-display font-extrabold shadow-lg shadow-emerald-500/20 mb-4 animate-bounce" style={{ animationDuration: '3s' }}>
-            🐾
-          </div>
-          <div className="flex items-center justify-center gap-2 text-white font-medium text-sm">
-            <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
-            <span>Cargando tienda...</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (!currentSellerName) {
     return (
@@ -943,6 +897,7 @@ export default function App() {
         onLoginSuccess={(name, role) => {
           handleLoginSuccess(name, role);
         }}
+        settings={settings}
       />
 
       <UrlExtractorBar

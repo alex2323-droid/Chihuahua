@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { LogIn, Key, User, AlertCircle, Loader2, UserPlus } from 'lucide-react';
 import { loginSeller, loginCustomer } from '../lib/firestoreService';
+import { StoreSettings } from '../types/catalog';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -8,9 +9,17 @@ interface LoginModalProps {
   onLoginSuccess: (username: string, role: 'seller' | 'customer') => void;
   allowClose?: boolean;
   isInline?: boolean;
+  settings?: StoreSettings;
 }
 
-export function LoginModal({ isOpen, onClose, onLoginSuccess, allowClose = true, isInline = false }: LoginModalProps) {
+export function LoginModal({ 
+  isOpen, 
+  onClose, 
+  onLoginSuccess, 
+  allowClose = true, 
+  isInline = false,
+  settings
+}: LoginModalProps) {
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -79,7 +88,30 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, allowClose = true,
       {/* Top Decorative Header */}
       {!isInline && <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600" />}
 
-      <div className="flex items-center justify-between mb-5">
+      {/* Main Brand Logo & Wordmark */}
+      <div className="flex flex-col items-center justify-center text-center mt-3 mb-6">
+        <div className="relative group">
+          <div className="absolute inset-0 bg-emerald-500/10 rounded-full blur-md group-hover:bg-emerald-500/20 transition-all duration-300" />
+          <div className="relative w-28 h-28 rounded-full overflow-hidden border-2 border-emerald-500 ring-4 ring-emerald-100 shadow-lg bg-slate-50 flex items-center justify-center">
+            <img 
+              src={settings?.storeLogo && settings.storeLogo.trim() !== '' ? settings.storeLogo : "/logo_chihuahua.jpg"} 
+              alt={settings?.storeName || "Team Chihuahua"} 
+              className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+              onError={(e) => {
+                e.currentTarget.src = "/logo_chihuahua.jpg";
+              }}
+            />
+          </div>
+        </div>
+        <h1 className="font-display font-extrabold text-2xl text-slate-900 mt-4 tracking-tight">
+          {settings?.storeName || "Team Chihuahua"}
+        </h1>
+        <p className="text-xs text-slate-500 font-bold tracking-wide uppercase mt-1">
+          {settings?.storeTagline || "Tu tienda de encargos"}
+        </p>
+      </div>
+
+      <div className="flex items-center justify-between mb-5 border-t border-slate-100 pt-5">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
             {activeTab === 'login' ? <LogIn className="w-6 h-6" /> : <UserPlus className="w-6 h-6" />}

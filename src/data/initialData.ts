@@ -5,9 +5,9 @@ import sneakersImg from '../assets/images/product_demo_sneakers_1790201152701.jp
 import watchImg from '../assets/images/product_demo_watch_1790201162642.jpg';
 
 export const initialStoreSettings: StoreSettings = {
-  storeName: 'Boutique Tendencias',
-  storeTagline: 'Catálogo de Moda, Relojería y Accesorios Exclusivos',
-  storeLogo: 'https://images.unsplash.com/photo-1534452203293-494d7ddbf7e0?w=200&auto=format&fit=crop&q=80',
+  storeName: 'Team Chihuahua',
+  storeTagline: 'Tu tienda de encargos',
+  storeLogo: '/logo_chihuahua.jpg',
   coverImage: heroBannerImg,
   whatsappNumber: '+525512345678',
   instagramHandle: '@boutique.tendencias',
