@@ -544,56 +544,109 @@ export interface CustomerProfile {
   createdAt: string;
 }
 
-// Convert human customer username to internal email
+// Convert human customer username or email to Firebase compatible email
 export function formatCustomerUsernameToEmail(username: string): string {
-  const clean = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-  return `${clean || 'client'}@client.internal`;
+  const trimmed = username.trim().toLowerCase();
+  // If the user already entered a standard email (e.g. usuario@gmail.com), use it directly
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+    return trimmed;
+  }
+  // Otherwise, remove accents (á->a, ñ->n) and special characters
+  const normalized = trimmed
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ñ/g, 'n')
+    .replace(/[^a-z0-9_.-]/g, '');
+  
+  const finalUsername = normalized.length > 0 ? normalized : 'cliente';
+  return `${finalUsername}@client.internal`;
 }
 
-// Customer Auth Handler (Strict login and registration)
+// Customer Auth Handler: Sign In
 export async function signInCustomer(username: string, rawPassword: string): Promise<{ user: User; username: string }> {
-  const email = formatCustomerUsernameToEmail(username);
+  const clean = username.trim();
+  if (!clean) {
+    throw new Error('Por favor ingresa tu usuario o correo.');
+  }
+  if (!rawPassword.trim()) {
+    throw new Error('Por favor ingresa tu contraseña.');
+  }
+
+  const email = formatCustomerUsernameToEmail(clean);
   const password = formatPasswordForFirebase(rawPassword);
 
   try {
     const userCred = await signInWithEmailAndPassword(auth, email, password);
-    return { user: userCred.user, username: username.trim() };
+    // Attempt to recover display username from Firestore if present
+    try {
+      const profileSnap = await getDoc(doc(db, 'customers', userCred.user.uid));
+      if (profileSnap.exists() && profileSnap.data()?.username) {
+        return { user: userCred.user, username: profileSnap.data().username };
+      }
+    } catch {}
+    return { user: userCred.user, username: clean };
   } catch (err: any) {
-    if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-      throw new Error('Usuario o contraseña incorrectos. Si no tienes una cuenta, por favor regístrate.');
+    if (
+      err.code === 'auth/user-not-found' ||
+      err.code === 'auth/invalid-credential' ||
+      err.code === 'auth/invalid-login-credentials' ||
+      err.code === 'auth/wrong-password'
+    ) {
+      throw new Error('Usuario o contraseña incorrectos. Si no tienes cuenta, crea una en la pestaña "Registro".');
+    }
+    if (err.code === 'auth/too-many-requests') {
+      throw new Error('Demasiados intentos fallidos. Espera un momento antes de volver a intentar.');
     }
     throw new Error(err.message || 'Error al iniciar sesión.');
   }
 }
 
+// Customer Auth Handler: Register
 export async function registerCustomer(username: string, rawPassword: string): Promise<{ user: User; username: string }> {
   const clean = username.trim();
+  if (!clean) {
+    throw new Error('Por favor ingresa un nombre de usuario o correo.');
+  }
   if (clean.toLowerCase() === 'chihuahua') {
     throw new Error('El nombre de usuario "Chihuahua" está reservado para el administrador.');
   }
-  if (clean.length < 3) {
-    throw new Error('El nombre de usuario debe tener al menos 3 caracteres.');
+  if (clean.length < 2) {
+    throw new Error('El nombre de usuario debe tener al menos 2 caracteres.');
   }
   if (rawPassword.length < 6) {
     throw new Error('La contraseña debe tener al menos 6 caracteres.');
   }
 
-  const email = formatCustomerUsernameToEmail(username);
+  const email = formatCustomerUsernameToEmail(clean);
   const password = formatPasswordForFirebase(rawPassword);
 
   try {
     const newCred = await createUserWithEmailAndPassword(auth, email, password);
-    await setDoc(doc(db, 'customers', newCred.user.uid), {
-      username: clean,
-      customerId: newCred.user.uid,
-      createdAt: new Date().toISOString(),
-    });
+    
+    // Save customer record in Firestore
+    try {
+      await setDoc(doc(db, 'customers', newCred.user.uid), {
+        username: clean,
+        email: email,
+        customerId: newCred.user.uid,
+        createdAt: new Date().toISOString(),
+      });
+    } catch (dbErr) {
+      console.warn('Could not persist customer profile to Firestore:', dbErr);
+    }
+    
     return { user: newCred.user, username: clean };
   } catch (err: any) {
     if (err.code === 'auth/email-already-in-use') {
-      throw new Error('El nombre de usuario ya está registrado. Por favor, inicia sesión.');
+      throw new Error(`El usuario o correo "${clean}" ya está registrado. Por favor, ve a "Iniciar Sesión".`);
     }
-    throw new Error(err.message || 'Error al registrarse.');
+    if (err.code === 'auth/weak-password') {
+      throw new Error('La contraseña debe tener al menos 6 caracteres.');
+    }
+    if (err.code === 'auth/invalid-email') {
+      throw new Error('El formato del nombre de usuario o correo no es válido.');
+    }
+    throw new Error(err.message || 'Error al registrar la cuenta.');
   }
 }
 
