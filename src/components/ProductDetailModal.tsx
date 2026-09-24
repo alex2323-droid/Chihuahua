@@ -127,7 +127,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     const cleanSourceLink = product.sourceUrl && product.sourceUrl.startsWith('http') ? product.sourceUrl : '';
     const linkToShow = cleanImageLink || cleanSourceLink;
 
-    const codeText = activeImageDetail?.code ? `📸 *Modelo/Color:* ${activeImageDetail.code}\n` : '';
+    const codeText = activeImageDetail?.code ? `📸 *Sub-Código:* ${activeImageDetail.code}\n` : '';
 
     const message = `Hola *${settings.storeName}*, me interesa este producto de su catálogo:\n\n📌 *${product.title}*\n📌 *Código:* ${product.sku || 'N/A'}\n${codeText}💰 *Precio:* ${product.currency}${currentPrice.toFixed(2)}\n${
       selectedSize ? `📏 *Talla Elegida:* ${selectedSize}\n` : product.sizes ? `📏 *Tallas:* ${product.sizes}\n` : ''
@@ -137,17 +137,21 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   };
 
   const copyProductDetails = () => {
-    const codeText = activeImageDetail?.code ? `📸 Modelo/Color: ${activeImageDetail.code}\n` : '';
-    const text = `🛍️ *${product.title}*\n📌 Código: ${product.sku || 'N/A'}\n${codeText}💰 Precio: ${product.currency}${currentPrice.toFixed(
-      2
-    )}${
-      currentOriginalPrice ? ` (Antes ${product.currency}${currentOriginalPrice.toFixed(2)})` : ''
-    }\n${selectedSize ? `📏 Talla seleccionada: ${selectedSize}\n` : product.sizes ? `📏 Tallas: ${product.sizes}\n` : ''}📝 ${product.description}\n${
-      product.sourceUrl ? `🔗 Enlace: ${product.sourceUrl}` : ''
-    }`;
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      const codeText = activeImageDetail?.code ? `📸 Sub-Código: ${activeImageDetail.code}\n` : '';
+      const text = `🛍️ *${product.title}*\n📌 Código: ${product.sku || 'N/A'}\n${codeText}💰 Precio: ${product.currency}${currentPrice.toFixed(
+        2
+      )}${
+        currentOriginalPrice ? ` (Antes ${product.currency}${currentOriginalPrice.toFixed(2)})` : ''
+      }\n${selectedSize ? `📏 Talla seleccionada: ${selectedSize}\n` : product.sizes ? `📏 Tallas: ${product.sizes}\n` : ''}📝 ${product.description}\n${
+        product.sourceUrl ? `🔗 Enlace: ${product.sourceUrl}` : ''
+      }`;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => {});
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
   };
 
   const handleAdd = () => {
@@ -277,11 +281,18 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   </span>
                   <span className="font-medium text-slate-400 truncate">{product.brand}</span>
                 </div>
-                {product.sku && (
-                  <span className="font-mono text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 shrink-0">
-                    SKU: {product.sku}
-                  </span>
-                )}
+                <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                  {product.sku && (
+                    <span className="font-mono text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                      Cód: {product.sku}
+                    </span>
+                  )}
+                  {activeImageDetail?.code && (
+                    <span className="font-mono text-xs font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                      Sub-Cód: {activeImageDetail.code}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Title */}

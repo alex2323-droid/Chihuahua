@@ -90,16 +90,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       : null;
 
   const copyWhatsAppFormat = () => {
-    const text = `🛍️ *${product.title}*\n📌 Código: ${product.sku || 'N/A'}\n💰 Precio: ${product.currency}${product.price.toFixed(
-      2
-    )}${
-      product.originalPrice ? ` (Antes ${product.currency}${product.originalPrice.toFixed(2)})` : ''
-    }\n${product.sizes ? `📏 Tallas: ${product.sizes}\n` : ''}📝 ${product.description}\n${
-      product.sourceUrl ? `🔗 Ver enlace: ${product.sourceUrl}` : ''
-    }`;
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      const text = `🛍️ *${product.title}*\n📌 Código: ${product.sku || 'N/A'}\n💰 Precio: ${product.currency}${product.price.toFixed(
+        2
+      )}${
+        product.originalPrice ? ` (Antes ${product.currency}${product.originalPrice.toFixed(2)})` : ''
+      }\n${product.sizes ? `📏 Tallas: ${product.sizes}\n` : ''}📝 ${product.description}\n${
+        product.sourceUrl ? `🔗 Ver enlace: ${product.sourceUrl}` : ''
+      }`;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => {});
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
   };
 
   // Theme accent colors

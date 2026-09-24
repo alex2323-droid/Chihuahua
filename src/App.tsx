@@ -11,6 +11,7 @@ import { ProductDetailModal } from './components/ProductDetailModal';
 import { initialStoreSettings, initialCatalogs } from './data/initialData';
 import { Product, StoreSettings, Catalog, CartItem } from './types/catalog';
 import { isLogoUrl, optimizeProductImageSize } from './utils/imageUtils';
+import { generateProductSku, generateSubCode } from './utils/codeUtils';
 import {
   loginSeller,
   logoutSeller,
@@ -58,7 +59,15 @@ export default function App() {
   // State initialization with localStorage fallback
   const [settings, setSettings] = useState<StoreSettings>(() => {
     const saved = localStorage.getItem('catalogcraft_settings');
-    return saved ? JSON.parse(saved) : initialStoreSettings;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          return parsed;
+        }
+      } catch {}
+    }
+    return initialStoreSettings;
   });
 
   const [catalogs, setCatalogs] = useState<Catalog[]>(() => {
@@ -451,9 +460,24 @@ export default function App() {
 
   // Extraction handlers
   const handleProductExtracted = async (product: Product) => {
+    const finalImages = product.images && product.images.length > 0
+      ? product.images
+      : (product.image ? [product.image] : []);
+
+    const imageDetails = finalImages.map((img, i) => {
+      const existing = product.imageDetails?.find((d) => d.url === img) || product.imageDetails?.[i];
+      return {
+        url: img,
+        price: existing?.price ?? null,
+        code: (existing?.code && existing.code.trim() !== '') ? existing.code.trim().toUpperCase() : generateSubCode(),
+      };
+    });
+
     const withSku = {
       ...product,
-      sku: product.sku || 'CH-' + Math.floor(1000 + Math.random() * 9000),
+      sku: product.sku || generateProductSku(),
+      images: finalImages,
+      imageDetails,
     };
     const optimized = await optimizeProductImageSize(withSku);
     setCatalogs((prevCatalogs) =>
@@ -466,10 +490,27 @@ export default function App() {
   };
 
   const handleBatchExtracted = async (newProducts: Product[]) => {
-    const withSkus = newProducts.map((p) => ({
-      ...p,
-      sku: p.sku || 'CH-' + Math.floor(1000 + Math.random() * 9000),
-    }));
+    const withSkus = newProducts.map((p) => {
+      const finalImages = p.images && p.images.length > 0
+        ? p.images
+        : (p.image ? [p.image] : []);
+
+      const imageDetails = finalImages.map((img, i) => {
+        const existing = p.imageDetails?.find((d) => d.url === img) || p.imageDetails?.[i];
+        return {
+          url: img,
+          price: existing?.price ?? null,
+          code: (existing?.code && existing.code.trim() !== '') ? existing.code.trim().toUpperCase() : generateSubCode(),
+        };
+      });
+
+      return {
+        ...p,
+        sku: p.sku || generateProductSku(),
+        images: finalImages,
+        imageDetails,
+      };
+    });
     const optimized = await Promise.all(withSkus.map((p) => optimizeProductImageSize(p)));
     setCatalogs((prevCatalogs) =>
       prevCatalogs.map((cat) =>
@@ -504,7 +545,27 @@ export default function App() {
 
   // Product CRUD
   const handleSaveProduct = async (updatedProduct: Product) => {
-    const optimized = await optimizeProductImageSize(updatedProduct);
+    const finalImages = updatedProduct.images && updatedProduct.images.length > 0
+      ? updatedProduct.images
+      : (updatedProduct.image ? [updatedProduct.image] : []);
+
+    const imageDetails = finalImages.map((img, i) => {
+      const existing = updatedProduct.imageDetails?.find((d) => d.url === img) || updatedProduct.imageDetails?.[i];
+      return {
+        url: img,
+        price: existing?.price ?? null,
+        code: (existing?.code && existing.code.trim() !== '') ? existing.code.trim().toUpperCase() : generateSubCode(),
+      };
+    });
+
+    const preparedProduct: Product = {
+      ...updatedProduct,
+      sku: updatedProduct.sku || generateProductSku(),
+      images: finalImages,
+      imageDetails,
+    };
+
+    const optimized = await optimizeProductImageSize(preparedProduct);
     setCatalogs((prevCatalogs) =>
       prevCatalogs.map((cat) => {
         if (cat.id !== activeCatalogId) return cat;
@@ -656,12 +717,14 @@ export default function App() {
 
   const filteredProducts = (activeCatalog?.products || []).filter((p) => {
     const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
+    const query = searchQuery.trim().toLowerCase();
     const matchesSearch =
-      searchQuery.trim() === '' ||
-      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase()));
+      query === '' ||
+      p.title.toLowerCase().includes(query) ||
+      p.description.toLowerCase().includes(query) ||
+      p.brand.toLowerCase().includes(query) ||
+      (p.sku && p.sku.toLowerCase().includes(query)) ||
+      (p.imageDetails && p.imageDetails.some((d) => d.code && d.code.toLowerCase().includes(query)));
     return matchesCategory && matchesSearch;
   });
 
@@ -670,12 +733,16 @@ export default function App() {
   };
 
   const copyShareableLink = () => {
-    const url = new URL(window.location.href);
-    const target = (isSeller && sellerUid) || activeViewingSellerUid || 'bdy3TcO5IAOpmkQEy8zLGpEkENG3';
-    url.searchParams.set('seller', target);
-    navigator.clipboard.writeText(url.toString());
-    setCopiedShareLink(true);
-    setTimeout(() => setCopiedShareLink(false), 2000);
+    try {
+      const url = new URL(window.location.href);
+      const target = (isSeller && sellerUid) || activeViewingSellerUid || 'bdy3TcO5IAOpmkQEy8zLGpEkENG3';
+      url.searchParams.set('seller', target);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url.toString()).catch(() => {});
+      }
+      setCopiedShareLink(true);
+      setTimeout(() => setCopiedShareLink(false), 2000);
+    } catch {}
   };
 
   // Grid layout column classes
@@ -1071,7 +1138,7 @@ export default function App() {
       <footer className="mt-auto bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500 no-print">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="font-medium text-slate-600">
-            © {new Date().getFullYear()} {settings.storeName} · Generador de Catálogos (Cuenta: {currentSellerName || 'General'})
+            © {new Date().getFullYear()} {settings.storeName} (Cuenta: {currentSellerName || 'General'})
           </p>
           <div className="text-slate-500">
             <span>WhatsApp: {settings.whatsappNumber}</span>

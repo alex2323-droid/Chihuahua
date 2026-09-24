@@ -9,8 +9,10 @@ import {
   Plus,
   Trash2,
   Layers,
+  RefreshCw,
 } from 'lucide-react';
 import { Product, SizeVariant, ProductImageDetail } from '../types/catalog';
+import { generateProductSku, generateSubCode } from '../utils/codeUtils';
 
 interface ProductEditorModalProps {
   product: Product | null;
@@ -51,7 +53,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
     if (product) {
       setFormData({
         ...product,
-        sku: product.sku || 'CH-' + Math.floor(1000 + Math.random() * 9000),
+        sku: product.sku || generateProductSku(),
       });
       const existingImages = product.images && product.images.length > 0
         ? product.images
@@ -60,11 +62,13 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
 
       const existingDetails = product.imageDetails && product.imageDetails.length > 0
         ? product.imageDetails
-        : existingImages.map(img => ({ url: img, price: null, code: '' }));
+        : existingImages.map(img => ({ url: img, price: null, code: generateSubCode() }));
       // Sync imageDetailsList with existingImages to maintain order and presence
       const syncedDetails = existingImages.map(img => {
         const found = existingDetails.find(d => d.url === img);
-        return found ? found : { url: img, price: null, code: '' };
+        return found
+          ? { ...found, code: (found.code && found.code.trim() !== '') ? found.code.trim().toUpperCase() : generateSubCode() }
+          : { url: img, price: null, code: generateSubCode() };
       });
       setImageDetailsList(syncedDetails);
 
@@ -79,7 +83,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
       const defaultImg = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
       setFormData({
         id: 'prod_' + Date.now(),
-        sku: 'CH-' + Math.floor(1000 + Math.random() * 9000),
+        sku: generateProductSku(),
         title: '',
         description: '',
         image: defaultImg,
@@ -95,7 +99,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
         inStock: true,
       });
       setImageList([defaultImg]);
-      setImageDetailsList([{ url: defaultImg, price: null, code: '' }]);
+      setImageDetailsList([{ url: defaultImg, price: null, code: generateSubCode() }]);
       setVariantsList([]);
       setUseCustomVariantPrices(false);
     }
@@ -178,7 +182,9 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
             setImageDetailsList((currentDetails) => {
               return combined.map((url) => {
                 const found = currentDetails.find((d) => d.url === url);
-                return found ? found : { url, price: null, code: '' };
+                return found
+                  ? { ...found, code: (found.code && found.code.trim() !== '') ? found.code.trim().toUpperCase() : generateSubCode() }
+                  : { url, price: null, code: generateSubCode() };
               });
             });
             setFormData((f) => ({
@@ -199,7 +205,9 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
             setImageDetailsList((currentDetails) => {
               return combined.map((url) => {
                 const found = currentDetails.find((d) => d.url === url);
-                return found ? found : { url, price: null, code: '' };
+                return found
+                  ? { ...found, code: (found.code && found.code.trim() !== '') ? found.code.trim().toUpperCase() : generateSubCode() }
+                  : { url, price: null, code: generateSubCode() };
               });
             });
             setFormData((f) => ({
@@ -227,7 +235,9 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
       setImageDetailsList((currentDetails) => {
         return updated.map((url) => {
           const found = currentDetails.find((d) => d.url === url);
-          return found ? found : { url, price: null, code: '' };
+          return found
+            ? { ...found, code: (found.code && found.code.trim() !== '') ? found.code.trim().toUpperCase() : generateSubCode() }
+            : { url, price: null, code: generateSubCode() };
         });
       });
       setFormData((f) => ({
@@ -342,12 +352,15 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
 
     onSave({
       id: formData.id || 'prod_' + Date.now(),
-      sku: formData.sku || 'CH-' + Math.floor(1000 + Math.random() * 9000),
+      sku: formData.sku || generateProductSku(),
       title: formData.title || 'Producto',
       description: formData.description || '',
       image: finalImages[0],
       images: finalImages,
-      imageDetails: imageDetailsList,
+      imageDetails: imageDetailsList.map((d) => ({
+        ...d,
+        code: (d.code && d.code.trim() !== '') ? d.code.trim().toUpperCase() : generateSubCode(),
+      })),
       price: basePrice,
       originalPrice: formData.originalPrice ? Number(formData.originalPrice) : null,
       currency: formData.currency || '$',
@@ -788,19 +801,32 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                         <div className="text-[11px] font-bold text-slate-600 w-12 truncate">
                           Foto #{idx + 1} {idx === 0 && <span className="text-emerald-600 block text-[9px]">(Principal)</span>}
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 flex items-center gap-1">
                           <input
                             type="text"
-                            placeholder="Sub-Código (Ej: Rojo, Azul...)"
+                            placeholder="Sub-Código (Ej: CH-4812)"
                             value={detail.code || ''}
                             onChange={(e) => {
-                              const val = e.target.value;
+                              const val = e.target.value.toUpperCase();
                               setImageDetailsList(current =>
                                 current.map((d, i) => i === idx ? { ...d, code: val } : d)
                               );
                             }}
-                            className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs outline-none focus:border-emerald-500 font-medium text-slate-800"
+                            className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs outline-none focus:border-emerald-500 font-mono font-bold text-slate-800"
                           />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newCode = generateSubCode();
+                              setImageDetailsList(current =>
+                                current.map((d, i) => i === idx ? { ...d, code: newCode } : d)
+                              );
+                            }}
+                            className="p-1 text-slate-400 hover:text-emerald-600 rounded-md hover:bg-slate-100 transition-colors shrink-0"
+                            title="Generar nuevo sub-código aleatorio"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                         <div className="w-24">
                           <div className="relative">

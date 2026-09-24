@@ -83,7 +83,7 @@ export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
       const itemPrice = item.unitPrice ?? item.product.price;
       const skuText = item.product.sku ? ` [Cód: ${item.product.sku}]` : '';
       const sizeText = item.selectedSize ? ` 📏 (Talla: *${item.selectedSize}*)` : '';
-      const codeText = item.selectedImageCode ? ` 📸 (Modelo/Color: *${item.selectedImageCode}*)` : '';
+      const codeText = item.selectedImageCode ? ` 📸 [Sub-Cód: *${item.selectedImageCode}*]` : '';
       message += `${index + 1}. *${item.product.title}*${skuText}${sizeText}${codeText}\n   Cantidad: ${item.quantity}x | Precio: ${
         item.product.currency
       }${(itemPrice * item.quantity).toFixed(2)}\n`;
@@ -177,8 +177,8 @@ export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
                             </span>
                           )}
                           {item.selectedImageCode && (
-                            <span className="text-[9px] font-extrabold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-200 leading-none shrink-0 uppercase">
-                              Mod: {item.selectedImageCode}
+                            <span className="text-[9px] font-extrabold bg-teal-100 text-teal-900 px-1.5 py-0.5 rounded border border-teal-200 leading-none shrink-0 font-mono">
+                              Sub-Cód: {item.selectedImageCode}
                             </span>
                           )}
                         </div>
