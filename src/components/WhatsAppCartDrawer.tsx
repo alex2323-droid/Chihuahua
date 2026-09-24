@@ -77,7 +77,8 @@ export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
 
     cart.forEach((item, index) => {
       const itemPrice = item.unitPrice ?? item.product.price;
-      message += `${index + 1}. *${item.product.title}*${
+      const skuText = item.product.sku ? ` [Cód: ${item.product.sku}]` : '';
+      message += `${index + 1}. *${item.product.title}*${skuText}${
         item.selectedSize ? ` 📏 (Talla: *${item.selectedSize}*)` : ''
       }\n   Cantidad: ${item.quantity}x | Precio: ${
         item.product.currency
@@ -156,13 +157,18 @@ export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
                         <h4 className="text-xs font-semibold text-slate-900 truncate">
                           {item.product.title}
                         </h4>
-                        <div className="flex items-center gap-2 mt-0.5">
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                           <p className="text-xs text-slate-600 font-mono font-bold">
                             {item.product.currency}
                             {((item.unitPrice ?? item.product.price) * item.quantity).toFixed(2)}
                           </p>
+                          {item.product.sku && (
+                            <span className="text-[9px] font-bold font-mono bg-emerald-50 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-200 leading-none shrink-0">
+                              {item.product.sku}
+                            </span>
+                          )}
                           {item.selectedSize && (
-                            <span className="text-[10px] font-extrabold bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded border border-purple-200">
+                            <span className="text-[9px] font-extrabold bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded border border-purple-200 leading-none shrink-0">
                               Talla: {item.selectedSize}
                             </span>
                           )}

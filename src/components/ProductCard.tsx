@@ -90,7 +90,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       : null;
 
   const copyWhatsAppFormat = () => {
-    const text = `🛍️ *${product.title}*\n💰 Precio: ${product.currency}${product.price.toFixed(
+    const text = `🛍️ *${product.title}*\n📌 Código: ${product.sku || 'N/A'}\n💰 Precio: ${product.currency}${product.price.toFixed(
       2
     )}${
       product.originalPrice ? ` (Antes ${product.currency}${product.originalPrice.toFixed(2)})` : ''
@@ -143,12 +143,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           onClick={() => onViewDetail && onViewDetail(product)}
           className="flex-1 min-w-0 cursor-pointer"
         >
-          <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
-            <span className="font-semibold text-slate-700 uppercase tracking-wider text-[10px]">
-              {product.category}
-            </span>
-            <span aria-hidden="true">·</span>
-            <span>{product.brand}</span>
+          <div className="flex items-center justify-between gap-2 text-xs text-slate-500 mb-1">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-semibold text-slate-700 uppercase tracking-wider text-[10px]">
+                {product.category}
+              </span>
+              <span aria-hidden="true" className="text-slate-300">·</span>
+              <span className="truncate">{product.brand}</span>
+            </div>
+            {product.sku && (
+              <span className="font-mono text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100/80 shrink-0">
+                {product.sku}
+              </span>
+            )}
           </div>
 
           <h3 className="font-semibold text-slate-900 text-base leading-snug truncate mb-1 hover:text-emerald-700 transition-colors">
@@ -321,12 +328,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           className="cursor-pointer"
         >
           {/* Metadata kicker */}
-          <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
-            <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">
-              {product.category}
-            </span>
-            <span aria-hidden="true" className="text-slate-300">·</span>
-            <span className="text-[11px] text-slate-500 truncate">{product.brand}</span>
+          <div className="flex items-center justify-between gap-1.5 text-xs text-slate-500 mb-1">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">
+                {product.category}
+              </span>
+              <span aria-hidden="true" className="text-slate-300">·</span>
+              <span className="text-[11px] text-slate-500 truncate">{product.brand}</span>
+            </div>
+            {product.sku && (
+              <span className="font-mono text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-100/80 shrink-0">
+                {product.sku}
+              </span>
+            )}
           </div>
 
           <h3 className="font-semibold text-slate-900 text-sm leading-snug line-clamp-2 mb-1 group-hover:text-emerald-700 transition-colors">

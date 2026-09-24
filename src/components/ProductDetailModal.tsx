@@ -101,14 +101,21 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   // WhatsApp order link
   const buildWhatsAppOrderUrl = () => {
     const rawNumber = (settings.whatsappNumber || '573000000000').replace(/[^0-9]/g, '');
-    const message = `Hola *${settings.storeName}*, me interesa este producto de su catálogo:\n\n📌 *${product.title}*\n💰 *Precio:* ${product.currency}${currentPrice.toFixed(2)}\n${
+    
+    // Avoid including huge base64 data strings in the WhatsApp message text
+    const cleanImageLink = displayImage && !displayImage.startsWith('data:') ? displayImage : '';
+    const cleanSourceLink = product.sourceUrl && product.sourceUrl.startsWith('http') ? product.sourceUrl : '';
+    const linkToShow = cleanImageLink || cleanSourceLink;
+
+    const message = `Hola *${settings.storeName}*, me interesa este producto de su catálogo:\n\n📌 *${product.title}*\n📌 *Código:* ${product.sku || 'N/A'}\n💰 *Precio:* ${product.currency}${currentPrice.toFixed(2)}\n${
       selectedSize ? `📏 *Talla Elegida:* ${selectedSize}\n` : product.sizes ? `📏 *Tallas:* ${product.sizes}\n` : ''
-    }🔗 *Imagen:* ${displayImage || product.sourceUrl || ''}\n\n¿Tienen disponibilidad?`;
+    }${linkToShow ? `🔗 *Enlace:* ${linkToShow}\n` : ''}\n¿Tienen disponibilidad?`;
+    
     return `https://wa.me/${rawNumber}?text=${encodeURIComponent(message)}`;
   };
 
   const copyProductDetails = () => {
-    const text = `🛍️ *${product.title}*\n💰 Precio: ${product.currency}${currentPrice.toFixed(
+    const text = `🛍️ *${product.title}*\n📌 Código: ${product.sku || 'N/A'}\n💰 Precio: ${product.currency}${currentPrice.toFixed(
       2
     )}${
       currentOriginalPrice ? ` (Antes ${product.currency}${currentOriginalPrice.toFixed(2)})` : ''
@@ -230,10 +237,17 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             <div>
               {/* Category & Brand */}
               <div className="flex items-center justify-between gap-2 text-xs text-slate-500 mb-2">
-                <span className="font-bold text-emerald-700 uppercase tracking-wider bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-100">
-                  {product.category || 'General'}
-                </span>
-                <span className="font-medium text-slate-400">{product.brand}</span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="font-bold text-emerald-700 uppercase tracking-wider bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-100">
+                    {product.category || 'General'}
+                  </span>
+                  <span className="font-medium text-slate-400 truncate">{product.brand}</span>
+                </div>
+                {product.sku && (
+                  <span className="font-mono text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 shrink-0">
+                    SKU: {product.sku}
+                  </span>
+                )}
               </div>
 
               {/* Title */}

@@ -6,6 +6,7 @@ export interface SizeVariant {
 
 export interface Product {
   id: string;
+  sku?: string;
   sourceUrl?: string;
   title: string;
   description: string;

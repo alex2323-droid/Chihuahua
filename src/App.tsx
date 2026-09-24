@@ -311,20 +311,28 @@ export default function App() {
 
   // Extraction handlers
   const handleProductExtracted = (product: Product) => {
+    const withSku = {
+      ...product,
+      sku: product.sku || 'CH-' + Math.floor(1000 + Math.random() * 9000),
+    };
     setCatalogs((prevCatalogs) =>
       prevCatalogs.map((cat) =>
         cat.id === activeCatalogId
-          ? { ...cat, products: [product, ...cat.products] }
+          ? { ...cat, products: [withSku, ...cat.products] }
           : cat
       )
     );
   };
 
   const handleBatchExtracted = (newProducts: Product[]) => {
+    const withSkus = newProducts.map((p) => ({
+      ...p,
+      sku: p.sku || 'CH-' + Math.floor(1000 + Math.random() * 9000),
+    }));
     setCatalogs((prevCatalogs) =>
       prevCatalogs.map((cat) =>
         cat.id === activeCatalogId
-          ? { ...cat, products: [...newProducts, ...cat.products] }
+          ? { ...cat, products: [...withSkus, ...cat.products] }
           : cat
       )
     );
@@ -476,7 +484,8 @@ export default function App() {
       searchQuery.trim() === '' ||
       p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.brand.toLowerCase().includes(searchQuery.toLowerCase());
+      p.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesCategory && matchesSearch;
   });
 

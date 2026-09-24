@@ -48,7 +48,10 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
 
   useEffect(() => {
     if (product) {
-      setFormData(product);
+      setFormData({
+        ...product,
+        sku: product.sku || 'CH-' + Math.floor(1000 + Math.random() * 9000),
+      });
       const existingImages = product.images && product.images.length > 0
         ? product.images
         : (product.image ? [product.image] : []);
@@ -65,6 +68,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
       const defaultImg = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
       setFormData({
         id: 'prod_' + Date.now(),
+        sku: 'CH-' + Math.floor(1000 + Math.random() * 9000),
         title: '',
         description: '',
         image: defaultImg,
@@ -261,6 +265,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
 
     onSave({
       id: formData.id || 'prod_' + Date.now(),
+      sku: formData.sku || 'CH-' + Math.floor(1000 + Math.random() * 9000),
       title: formData.title || 'Producto',
       description: formData.description || '',
       image: finalImages[0],
@@ -299,19 +304,34 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           
-          {/* Title */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Nombre del Producto *
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.title || ''}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Ej: Zapatillas Urban Minimalist"
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
-            />
+          {/* Title & SKU */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div className="sm:col-span-3">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Nombre del Producto *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.title || ''}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Ej: Zapatillas Urban Minimalist"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Código Único *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.sku || ''}
+                onChange={(e) => setFormData({ ...formData, sku: e.target.value.trim().toUpperCase() })}
+                placeholder="Ej: CH-4819"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 font-mono font-bold text-emerald-700"
+              />
+            </div>
           </div>
 
           {/* Price & Discount */}

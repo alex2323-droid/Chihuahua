@@ -26,6 +26,7 @@ export const initialCatalogs: Catalog[] = [
     products: [
       {
         id: 'demo_1',
+        sku: 'CH-7019',
         title: 'Zapatillas Urban Minimalist Leather',
         description: 'Zapatillas de cuero genuino con suela ergonómica. Ideales para uso diario con estilo moderno y confort duradero.',
         image: sneakersImg,
@@ -40,6 +41,7 @@ export const initialCatalogs: Catalog[] = [
       },
       {
         id: 'demo_2',
+        sku: 'CH-4052',
         title: 'Reloj Cronógrafo Acero Inoxidable',
         description: 'Reloj de alta precisión con caja de acero satinado, cristal antirreflejos y resistencia al agua hasta 50 metros.',
         image: watchImg,
@@ -54,6 +56,7 @@ export const initialCatalogs: Catalog[] = [
       },
       {
         id: 'demo_3',
+        sku: 'CH-3011',
         title: 'Gafas de Sol Polarizadas Classic Acetate',
         description: 'Montura de acetato de celulosa hecha a mano con lentes UV400 categoría 3. Protección total y estética intemporal.',
         image: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80',
@@ -68,6 +71,7 @@ export const initialCatalogs: Catalog[] = [
       },
       {
         id: 'demo_4',
+        sku: 'CH-8924',
         title: 'Bolso de Mano Cuero Granulado Minimal',
         description: 'Bolso estructurado de piel granulada de primera calidad con compartimentos internos y correa ajustable.',
         image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600&auto=format&fit=crop&q=80',
@@ -82,6 +86,7 @@ export const initialCatalogs: Catalog[] = [
       },
       {
         id: 'demo_5',
+        sku: 'CH-2015',
         title: 'Perfume Unisex Eau de Parfum Amber & Silk 100ml',
         description: 'Aroma envolvente con notas de salida de bergamota, corazón de ámbar cálido y fondo de madera de sándalo.',
         image: 'https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=600&auto=format&fit=crop&q=80',
@@ -96,6 +101,7 @@ export const initialCatalogs: Catalog[] = [
       },
       {
         id: 'demo_6',
+        sku: 'CH-9051',
         title: 'Auriculares Inalámbricos Noise Cancelling Pro',
         description: 'Cancelación activa de ruido adaptativa, micrófono HD para llamadas cristalinas y hasta 30 horas de autonomía.',
         image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80',
