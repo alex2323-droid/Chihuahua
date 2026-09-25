@@ -18,6 +18,11 @@ import {
 } from 'firebase/auth';
 import { db, auth } from './firebase';
 import { StoreSettings, Catalog, Product } from '../types/catalog';
+import { getStoredItem, setStoredItem } from './indexedDbStorage';
+
+// In-memory cache for chunked catalogs to avoid redundant network reads and reduce Firestore quota usage
+const chunkedCatalogCache = new Map<string, { updatedAt: string; products: any[] }>();
+
 
 export enum OperationType {
   CREATE = 'create',
@@ -467,6 +472,7 @@ export async function deleteCatalogFromFirestore(
 }
 
 // Subscribe to all Catalogs for a seller (transparently reassembles chunked high-res catalogs)
+// Subscribe to real-time catalog changes for a seller
 export function subscribeToSellerCatalogs(
   sellerId: string,
   onData: (catalogs: Catalog[]) => void,
@@ -480,6 +486,15 @@ export function subscribeToSellerCatalogs(
         const catalogPromises = snapshot.docs.map(async (docSnap) => {
           const rawCat = docSnap.data() as any;
           if (rawCat.isChunked && rawCat.chunkCount > 0) {
+            // Check memory cache first
+            const cached = chunkedCatalogCache.get(rawCat.id);
+            if (cached && cached.updatedAt === rawCat.updatedAt && cached.products.length > 0) {
+              return rehydrateCatalog({
+                ...rawCat,
+                products: cached.products,
+              });
+            }
+
             try {
               const chunkSnap = await getDocs(
                 collection(db, 'sellers', sellerId, 'catalogs', rawCat.id, 'chunks')
@@ -492,12 +507,26 @@ export function subscribeToSellerCatalogs(
                   allProducts.push(...cd.products);
                 }
               }
+
+              // Store in memory cache
+              chunkedCatalogCache.set(rawCat.id, {
+                updatedAt: rawCat.updatedAt || new Date().toISOString(),
+                products: allProducts,
+              });
+
               return rehydrateCatalog({
                 ...rawCat,
                 products: allProducts,
               });
             } catch (chunkErr) {
-              console.error('Error fetching catalog chunks:', chunkErr);
+              console.warn('Error fetching catalog chunks (e.g. quota limit):', chunkErr);
+              // Fallback to memory cache if present
+              if (cached && cached.products.length > 0) {
+                return rehydrateCatalog({
+                  ...rawCat,
+                  products: cached.products,
+                });
+              }
               return rehydrateCatalog(rawCat as Catalog);
             }
           } else {
@@ -507,14 +536,21 @@ export function subscribeToSellerCatalogs(
 
         const catalogs = await Promise.all(catalogPromises);
         catalogs.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        
+        // Cache to IndexedDB for offline instant load
+        if (catalogs.length > 0) {
+          setStoredItem(`cached_catalogs_${sellerId}`, catalogs).catch(() => {});
+          setStoredItem('cached_catalogs_latest', catalogs).catch(() => {});
+        }
+
         onData(catalogs);
       } catch (err) {
-        handleFirestoreError(err, OperationType.LIST, path);
+        console.warn('Snapshot error in catalogs processing:', err);
         if (onError) onError(err);
       }
     },
     (err) => {
-      handleFirestoreError(err, OperationType.LIST, path);
+      console.warn('Firestore subscription catalog error (e.g. quota limit):', err);
       if (onError) onError(err);
     }
   );
@@ -536,7 +572,7 @@ export function subscribeToStoreSettings(
       }
     },
     (err) => {
-      handleFirestoreError(err, OperationType.GET, path);
+      console.warn('Firestore subscription settings error (e.g. quota limit):', err);
     }
   );
 }
@@ -729,7 +765,6 @@ export async function loadCustomerProfileFromFirestore(customerId: string): Prom
 
 // Get all active sellers/stores in the system so customers can browse catalogs
 export async function getAllSellersFromFirestore(): Promise<{ sellerId: string; username: string }[]> {
-  const path = 'sellers';
   try {
     const snap = await getDocs(collection(db, 'sellers'));
     const sellers: { sellerId: string; username: string }[] = [];
@@ -742,11 +777,25 @@ export async function getAllSellersFromFirestore(): Promise<{ sellerId: string; 
         username: uName,
       });
     });
-    return sellers;
+    if (sellers.length > 0) {
+      try {
+        localStorage.setItem('cached_sellers', JSON.stringify(sellers));
+      } catch {}
+      return sellers;
+    }
   } catch (err) {
-    handleFirestoreError(err, OperationType.LIST, path);
-    return [];
+    console.warn('Firestore listing sellers reached quota or offline limit, using cached/fallback sellers.', err);
   }
+
+  // Graceful fallback from localStorage or default primary store
+  try {
+    const cached = localStorage.getItem('cached_sellers');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return [{ sellerId: 'bdy3TcO5IAOpmkQEy8zLGpEkENG3', username: 'Chihuahua' }];
 }
 
 // Get the default primary store seller ID (Chihuahua) for customer browsing

@@ -12,6 +12,7 @@ import { initialStoreSettings, initialCatalogs } from './data/initialData';
 import { Product, StoreSettings, Catalog, CartItem } from './types/catalog';
 import { isLogoUrl, optimizeProductImageSize } from './utils/imageUtils';
 import { generateProductSku, generateSubCode } from './utils/codeUtils';
+import { getStoredItem, setStoredItem } from './lib/indexedDbStorage';
 import {
   loginSeller,
   logoutSeller,
@@ -153,6 +154,42 @@ export default function App() {
   const [layoutMode, setLayoutMode] = useState<'grid-3' | 'grid-2' | 'grid-4' | 'list'>('grid-3');
   const [copiedShareLink, setCopiedShareLink] = useState(false);
 
+  // 0. Ultra-fast initial hydration from IndexedDB for instant 0ms product loading
+  useEffect(() => {
+    let isMounted = true;
+    getStoredItem<Catalog[]>('cached_catalogs_latest').then((cached) => {
+      if (!isMounted) return;
+      if (cached && Array.isArray(cached) && cached.length > 0) {
+        setCatalogs((prev) => {
+          const currentCount = prev.reduce((acc, c) => acc + (c.products?.length || 0), 0);
+          const cachedCount = cached.reduce((acc, c) => acc + (c.products?.length || 0), 0);
+          if (currentCount === 0 || cachedCount >= currentCount) {
+            return cached;
+          }
+          return prev;
+        });
+        setActiveCatalogId((prev) => {
+          if (!prev || !cached.some((c) => c.id === prev)) {
+            return cached[0].id;
+          }
+          return prev;
+        });
+        setIsLoadingCatalogs(false);
+      }
+    });
+
+    getStoredItem<StoreSettings>('cached_settings_latest').then((cachedSettings) => {
+      if (!isMounted) return;
+      if (cachedSettings && cachedSettings.storeName) {
+        setSettings((prev) => ({ ...prev, ...cachedSettings }));
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // 1. Fetch available sellers on boot and whenever login state changes
   const refreshSellers = async () => {
     try {
@@ -254,6 +291,7 @@ export default function App() {
           lastSavedSettingsRef.current = cloudStr;
           return cloudSettings;
         });
+        setStoredItem('cached_settings_latest', cloudSettings).catch(() => {});
       }
       hasLoadedSettingsFromCloud.current = true;
     });
@@ -264,7 +302,17 @@ export default function App() {
       if (cloudCatalogs && cloudCatalogs.length > 0) {
         const cloudStr = JSON.stringify(cloudCatalogs);
         isRemoteCatalogUpdateRef.current = true;
-        setCatalogs(cloudCatalogs);
+        setCatalogs((prev) => {
+          const currentCount = prev.reduce((acc, c) => acc + (c.products?.length || 0), 0);
+          const cloudCount = cloudCatalogs.reduce((acc, c) => acc + (c.products?.length || 0), 0);
+          // If cloud has 0 products but local state already has products, keep local products
+          if (cloudCount === 0 && currentCount > 0) {
+            return prev;
+          }
+          return cloudCatalogs;
+        });
+        setStoredItem('cached_catalogs_latest', cloudCatalogs).catch(() => {});
+        setStoredItem(`cached_catalogs_${targetUid}`, cloudCatalogs).catch(() => {});
         setActiveCatalogId((prev) => {
           if (!prev || !cloudCatalogs.some((c) => c.id === prev)) {
             return cloudCatalogs[0].id;
@@ -287,6 +335,7 @@ export default function App() {
   useEffect(() => {
     const settingsStr = JSON.stringify(settings);
     localStorage.setItem('catalogcraft_settings', settingsStr);
+    setStoredItem('cached_settings_latest', settings).catch(() => {});
 
     // If update arrived from cloud subscription, do not echo back
     if (isRemoteSettingsUpdateRef.current) {
@@ -328,7 +377,15 @@ export default function App() {
     try {
       localStorage.setItem('catalogcraft_catalogs', catalogsStr);
     } catch {
-      // LocalStorage is limited to 5MB, high-res catalogs are safely persisted in Cloud Firestore
+      // LocalStorage is limited to 5MB, high-res catalogs are safely persisted in Cloud Firestore & IndexedDB
+    }
+
+    // Always persist full high-res catalogs in IndexedDB for 0ms startup
+    if (catalogs.length > 0) {
+      setStoredItem('cached_catalogs_latest', catalogs).catch(() => {});
+      if (sellerUid) {
+        setStoredItem(`cached_catalogs_${sellerUid}`, catalogs).catch(() => {});
+      }
     }
 
     // If update arrived from cloud subscription, do not echo back
@@ -456,7 +513,10 @@ export default function App() {
     };
   }, [catalogs, hasLoadedCatalogsFromCloud.current]);
 
-  const activeCatalog = catalogs.find((c) => c.id === activeCatalogId) || catalogs[0];
+  const activeCatalog =
+    catalogs.find((c) => c.id === activeCatalogId) ||
+    catalogs.find((c) => c.products && c.products.length > 0) ||
+    catalogs[0];
 
   // Extraction handlers
   const handleProductExtracted = async (product: Product) => {
