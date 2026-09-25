@@ -5,10 +5,16 @@ import {
   persistentLocalCache,
   persistentMultipleTabManager,
   getFirestore,
+  setLogLevel,
   doc,
   getDocFromServer,
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
+
+// Silence internal Firestore SDK retry and quota logs
+try {
+  setLogLevel('silent');
+} catch {}
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
@@ -37,4 +43,5 @@ async function testConnection() {
   }
 }
 testConnection();
+
 
