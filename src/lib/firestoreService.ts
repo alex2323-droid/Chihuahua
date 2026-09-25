@@ -4,6 +4,7 @@ import {
   setDoc,
   collection,
   getDocs,
+  getDocsFromServer,
   onSnapshot,
   deleteDoc,
   writeBatch,
@@ -665,9 +666,16 @@ export function subscribeToSellerCatalogs(
             }
 
             try {
-              const chunkSnap = await getDocs(
-                collection(db, 'sellers', sellerId, 'catalogs', rawCat.id, 'chunks')
-              );
+              let chunkSnap;
+              try {
+                chunkSnap = await getDocsFromServer(
+                  collection(db, 'sellers', sellerId, 'catalogs', rawCat.id, 'chunks')
+                );
+              } catch {
+                chunkSnap = await getDocs(
+                  collection(db, 'sellers', sellerId, 'catalogs', rawCat.id, 'chunks')
+                );
+              }
               const chunkDocs = chunkSnap.docs.map((cd) => cd.data());
               chunkDocs.sort((a, b) => (a.chunkIndex ?? 0) - (b.chunkIndex ?? 0));
               const allProducts: any[] = [];

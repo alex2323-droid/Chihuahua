@@ -539,6 +539,19 @@ export default function App() {
   // Force manual cloud sync handler
   const [syncToastMessage, setSyncToastMessage] = useState<string | null>(null);
 
+  const dispatchImmediateCatalogSync = (nextCatalogs: Catalog[]) => {
+    const targetUid = isSeller && sellerUid ? sellerUid : (activeViewingSellerUid || 'bdy3TcO5IAOpmkQEy8zLGpEkENG3');
+    if (targetUid && nextCatalogs.length > 0) {
+      setIsSyncing(true);
+      saveAllCatalogsToFirestore(targetUid, nextCatalogs, true)
+        .then(() => {
+          lastSavedCatalogsRef.current = JSON.stringify(nextCatalogs);
+        })
+        .catch((e) => console.warn('Background immediate sync error:', e))
+        .finally(() => setIsSyncing(false));
+    }
+  };
+
   const handleForceSyncToCloud = async () => {
     const targetUid = isSeller && sellerUid ? sellerUid : 'bdy3TcO5IAOpmkQEy8zLGpEkENG3';
     setIsSyncing(true);
@@ -600,15 +613,15 @@ export default function App() {
       imageDetails,
     };
     const optimized = await optimizeProductImageSize(withSku);
-    setCatalogs((prevCatalogs) => {
-      const { list, targetId } = ensureCatalogTarget(prevCatalogs, activeCatalogId);
-      setActiveCatalogId(targetId);
-      return list.map((cat) =>
-        cat.id === targetId
-          ? { ...cat, products: [optimized, ...(cat.products || []).filter((p) => p.id !== optimized.id)] }
-          : cat
-      );
-    });
+    const { list, targetId } = ensureCatalogTarget(catalogs, activeCatalogId);
+    setActiveCatalogId(targetId);
+    const updated = list.map((cat) =>
+      cat.id === targetId
+        ? { ...cat, products: [optimized, ...(cat.products || []).filter((p) => p.id !== optimized.id)] }
+        : cat
+    );
+    setCatalogs(updated);
+    dispatchImmediateCatalogSync(updated);
   };
 
   const handleBatchExtracted = async (newProducts: Product[]) => {
@@ -634,16 +647,16 @@ export default function App() {
       };
     });
     const optimized = await Promise.all(withSkus.map((p) => optimizeProductImageSize(p)));
-    setCatalogs((prevCatalogs) => {
-      const { list, targetId } = ensureCatalogTarget(prevCatalogs, activeCatalogId);
-      setActiveCatalogId(targetId);
-      const newIds = new Set(optimized.map((p) => p.id));
-      return list.map((cat) =>
-        cat.id === targetId
-          ? { ...cat, products: [...optimized, ...(cat.products || []).filter((p) => !newIds.has(p.id))] }
-          : cat
-      );
-    });
+    const { list, targetId } = ensureCatalogTarget(catalogs, activeCatalogId);
+    setActiveCatalogId(targetId);
+    const newIds = new Set(optimized.map((p) => p.id));
+    const updated = list.map((cat) =>
+      cat.id === targetId
+        ? { ...cat, products: [...optimized, ...(cat.products || []).filter((p) => !newIds.has(p.id))] }
+        : cat
+    );
+    setCatalogs(updated);
+    dispatchImmediateCatalogSync(updated);
   };
 
   // Re-extract single product photo
@@ -691,30 +704,30 @@ export default function App() {
     };
 
     const optimized = await optimizeProductImageSize(preparedProduct);
-    setCatalogs((prevCatalogs) => {
-      const { list, targetId } = ensureCatalogTarget(prevCatalogs, activeCatalogId);
-      setActiveCatalogId(targetId);
-      return list.map((cat) => {
-        if (cat.id !== targetId) return cat;
-        const exists = cat.products.some((p) => p.id === optimized.id);
-        return {
-          ...cat,
-          products: exists
-            ? cat.products.map((p) => (p.id === optimized.id ? optimized : p))
-            : [optimized, ...(cat.products || [])],
-        };
-      });
+    const { list, targetId } = ensureCatalogTarget(catalogs, activeCatalogId);
+    setActiveCatalogId(targetId);
+    const updated = list.map((cat) => {
+      if (cat.id !== targetId) return cat;
+      const exists = cat.products.some((p) => p.id === optimized.id);
+      return {
+        ...cat,
+        products: exists
+          ? cat.products.map((p) => (p.id === optimized.id ? optimized : p))
+          : [optimized, ...(cat.products || [])],
+      };
     });
+    setCatalogs(updated);
+    dispatchImmediateCatalogSync(updated);
   };
 
   const handleDeleteProduct = (id: string) => {
-    setCatalogs((prevCatalogs) =>
-      prevCatalogs.map((cat) =>
-        cat.id === activeCatalogId
-          ? { ...cat, products: cat.products.filter((p) => p.id !== id) }
-          : cat
-      )
+    const updated = catalogs.map((cat) =>
+      cat.id === activeCatalogId
+        ? { ...cat, products: cat.products.filter((p) => p.id !== id) }
+        : cat
     );
+    setCatalogs(updated);
+    dispatchImmediateCatalogSync(updated);
   };
 
   // Catalog CRUD
@@ -730,8 +743,10 @@ export default function App() {
       products: [],
     };
 
-    setCatalogs((prev) => [...prev, newCat]);
+    const updated = [...catalogs, newCat];
+    setCatalogs(updated);
     setActiveCatalogId(newCat.id);
+    dispatchImmediateCatalogSync(updated);
   };
 
   // Cart operations
