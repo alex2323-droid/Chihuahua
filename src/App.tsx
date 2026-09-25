@@ -395,15 +395,15 @@ export default function App() {
       return;
     }
 
-    // Safeguard: Only auto-save if we are the verified seller owner AND data loading has fully completed
-    if (isSeller && sellerUid && hasLoadedCatalogsFromCloud.current) {
+    // Safeguard: Auto-save to Firestore whenever the seller has catalogs in memory
+    if (isSeller && sellerUid && catalogs.length > 0) {
       if (lastSavedCatalogsRef.current === catalogsStr) return;
 
       if (saveCatalogTimeoutRef.current) {
         clearTimeout(saveCatalogTimeoutRef.current);
       }
 
-      // Debounce auto-save by 1500ms to consolidate user edits and prevent stream congestion
+      // Debounce auto-save by 800ms to consolidate user edits and prevent stream congestion
       saveCatalogTimeoutRef.current = setTimeout(async () => {
         lastSavedCatalogsRef.current = catalogsStr;
         setIsSyncing(true);
@@ -414,7 +414,7 @@ export default function App() {
         } finally {
           setIsSyncing(false);
         }
-      }, 1500);
+      }, 800);
     }
 
     return () => {

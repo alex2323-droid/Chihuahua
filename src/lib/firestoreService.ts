@@ -88,12 +88,11 @@ export async function loginSeller(username: string, rawPassword: string): Promis
   try {
     // Try signing in
     const userCred = await signInWithEmailAndPassword(auth, email, password);
-    try {
-      await setDoc(doc(db, 'sellers', userCred.user.uid), {
-        username: username.trim(),
-        sellerId: userCred.user.uid,
-      }, { merge: true });
-    } catch {}
+    // Non-blocking background touch
+    setDoc(doc(db, 'sellers', userCred.user.uid), {
+      username: username.trim(),
+      sellerId: userCred.user.uid,
+    }, { merge: true }).catch(() => {});
     return { user: userCred.user, username: username.trim() };
   } catch (err: any) {
     // If user not found, create new account automatically
@@ -104,16 +103,15 @@ export async function loginSeller(username: string, rawPassword: string): Promis
     ) {
       try {
         const newCred = await createUserWithEmailAndPassword(auth, email, password);
-        // Initialize seller profile
-        const sellerPath = `sellers/${newCred.user.uid}`;
-        await setDoc(doc(db, 'sellers', newCred.user.uid), {
+        // Initialize seller profile in background
+        setDoc(doc(db, 'sellers', newCred.user.uid), {
           username: username.trim(),
           sellerId: newCred.user.uid,
           createdAt: new Date().toISOString(),
-        });
+        }).catch(() => {});
         return { user: newCred.user, username: username.trim() };
       } catch (createErr: any) {
-        throw new Error('Error al registrar usuario en la base de datos: ' + createErr.message);
+        throw new Error('Error al registrar usuario: ' + createErr.message);
       }
     }
     throw new Error('Contraseña o usuario incorrecto.');
@@ -619,13 +617,6 @@ export async function signInCustomer(username: string, rawPassword: string): Pro
 
   try {
     const userCred = await signInWithEmailAndPassword(auth, email, password);
-    // Attempt to recover display username from Firestore if present
-    try {
-      const profileSnap = await getDoc(doc(db, 'customers', userCred.user.uid));
-      if (profileSnap.exists() && profileSnap.data()?.username) {
-        return { user: userCred.user, username: profileSnap.data().username };
-      }
-    } catch {}
     return { user: userCred.user, username: clean };
   } catch (err: any) {
     // If sign in fails, check if the account was registered with legacy @client.internal domain
