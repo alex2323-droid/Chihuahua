@@ -50,5 +50,12 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && request.auth.uid == customerId;
     }
+
+    // Diagnostic error logs for remote troubleshooting
+    match /error_logs/{logId} {
+      allow create: if true;
+      allow read: if isSignedIn();
+      allow update, delete: if false;
+    }
   }
 }

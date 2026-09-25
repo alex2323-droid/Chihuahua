@@ -20,6 +20,7 @@ import {
   saveStoreSettingsToFirestore,
   saveCatalogToFirestore,
   saveAllCatalogsToFirestore,
+  syncCatalogNowToFirestore,
   subscribeToSellerCatalogs,
   subscribeToStoreSettings,
   loginCustomer,
@@ -54,6 +55,9 @@ import {
   Settings,
   ShoppingBag,
   LogIn,
+  RefreshCw,
+  ChevronDown,
+  Loader2,
 } from 'lucide-react';
 
 export default function App() {
@@ -532,6 +536,25 @@ export default function App() {
       createdAt: new Date().toISOString(),
     };
 
+  // Force manual cloud sync handler
+  const [syncToastMessage, setSyncToastMessage] = useState<string | null>(null);
+
+  const handleForceSyncToCloud = async () => {
+    const targetUid = isSeller && sellerUid ? sellerUid : 'bdy3TcO5IAOpmkQEy8zLGpEkENG3';
+    setIsSyncing(true);
+    try {
+      await syncCatalogNowToFirestore(targetUid, catalogs);
+      await saveStoreSettingsToFirestore(targetUid, settings);
+      setSyncToastMessage('¡Catálogo sincronizado exitosamente con la nube en todos los dispositivos!');
+      setTimeout(() => setSyncToastMessage(null), 4000);
+    } catch (err: any) {
+      setSyncToastMessage('Guardado en almacenamiento local.');
+      setTimeout(() => setSyncToastMessage(null), 3000);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   // Helper to ensure at least one catalog exists and returns valid target
   const ensureCatalogTarget = (catalogsList: Catalog[], targetId?: string): { list: Catalog[]; targetId: string } => {
     if (!catalogsList || catalogsList.length === 0) {
@@ -832,6 +855,54 @@ export default function App() {
     return matchesCategory && matchesSearch;
   });
 
+  // Performance Pagination / Load More Strategy
+  const PRODUCTS_PER_PAGE = 12;
+  const [visibleProductsCount, setVisibleProductsCount] = useState<number>(PRODUCTS_PER_PAGE);
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // Reset pagination when category, search query, or active catalog changes
+  useEffect(() => {
+    setVisibleProductsCount(PRODUCTS_PER_PAGE);
+  }, [selectedCategory, searchQuery, activeCatalogId]);
+
+  // Infinite scroll trigger via IntersectionObserver
+  useEffect(() => {
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const target = entries[0];
+        if (target.isIntersecting && visibleProductsCount < filteredProducts.length && !isLoadingMore) {
+          setIsLoadingMore(true);
+          setTimeout(() => {
+            setVisibleProductsCount((prev) => Math.min(prev + PRODUCTS_PER_PAGE, filteredProducts.length));
+            setIsLoadingMore(false);
+          }, 150);
+        }
+      },
+      { rootMargin: '300px' }
+    );
+
+    observer.observe(sentinel);
+    return () => {
+      observer.disconnect();
+    };
+  }, [visibleProductsCount, filteredProducts.length, isLoadingMore]);
+
+  const handleManualLoadMore = () => {
+    setVisibleProductsCount((prev) => Math.min(prev + PRODUCTS_PER_PAGE, filteredProducts.length));
+  };
+
+  const handleShowAllProducts = () => {
+    setVisibleProductsCount(filteredProducts.length);
+  };
+
+  // Sliced products for rendering
+  const displayedProducts = filteredProducts.slice(0, visibleProductsCount);
+  const hasMoreProducts = visibleProductsCount < filteredProducts.length;
+
   const handlePrint = () => {
     window.print();
   };
@@ -1006,6 +1077,22 @@ export default function App() {
           )}
         </div>
 
+        {/* Sync Toast Notification */}
+        {syncToastMessage && (
+          <div className="mb-4 p-4 bg-emerald-600 text-white rounded-2xl shadow-xl flex items-center justify-between gap-3 text-sm font-semibold animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 className="w-5 h-5 text-white shrink-0" />
+              <span>{syncToastMessage}</span>
+            </div>
+            <button
+              onClick={() => setSyncToastMessage(null)}
+              className="px-2.5 py-1 text-xs bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+            >
+              Cerrar
+            </button>
+          </div>
+        )}
+
         {/* Account Auto-Save Notice Banner */}
         {currentSellerName && !effectiveCustomerMode && (
           <div className="mb-6 p-3.5 bg-emerald-900 text-emerald-100 rounded-2xl shadow-xs border border-emerald-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
@@ -1014,13 +1101,24 @@ export default function App() {
               <div>
                 <span className="font-bold text-white">Sesión activa como Vendedor: {currentSellerName}</span>
                 <span className="block text-emerald-300 text-[11px]">
-                  Cualquier producto agregado, cambio de precio o ajuste de tienda se guarda automáticamente en tu cuenta.
+                  Cualquier producto agregado, cambio de precio o ajuste de tienda se sincroniza con la nube para todos los dispositivos.
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0 bg-emerald-950 px-3 py-1.5 rounded-xl border border-emerald-700/60 font-mono text-[11px] text-emerald-300">
-              <Cloud className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-              <span>{isSyncing ? 'Guardando en la nube...' : 'Sincronizado'}</span>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={handleForceSyncToCloud}
+                disabled={isSyncing}
+                className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 text-xs disabled:opacity-50"
+                title="Forzar sincronización inmediata con la base de datos de la nube"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar Nube'}</span>
+              </button>
+              <div className="flex items-center gap-1.5 bg-emerald-950 px-2.5 py-1.5 rounded-xl border border-emerald-700/60 font-mono text-[11px] text-emerald-300">
+                <Cloud className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                <span>{isSyncing ? 'Guardando...' : 'Nube Activa'}</span>
+              </div>
             </div>
           </div>
         )}
@@ -1080,6 +1178,16 @@ export default function App() {
                 >
                   <PlusCircle className="w-4 h-4" />
                   <span>Crear Manualmente</span>
+                </button>
+
+                <button
+                  onClick={handleForceSyncToCloud}
+                  disabled={isSyncing}
+                  className="px-3.5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                  title="Sincronizar todos los productos del catálogo con la nube"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                  <span>Sincronizar Nube</span>
                 </button>
 
                 <button
@@ -1212,28 +1320,87 @@ export default function App() {
             </button>
           </div>
         ) : (
-          <div className={gridLayoutClass}>
-            {filteredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                settings={settings}
-                isCustomerMode={effectiveCustomerMode}
-                onEdit={(p) => {
-                  setEditingProduct(p);
-                  setIsEditorOpen(true);
-                }}
-                onDelete={handleDeleteProduct}
-                onAddToCart={handleAddToCart}
-                onReExtract={handleReExtractProduct}
-                onViewDetail={(p) => {
-                  setSelectedDetailProduct(p);
-                  setIsDetailOpen(true);
-                }}
-                layout={layoutMode}
-              />
-            ))}
-          </div>
+          <>
+            <div className={gridLayoutClass}>
+              {displayedProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  settings={settings}
+                  isCustomerMode={effectiveCustomerMode}
+                  onEdit={(p) => {
+                    setEditingProduct(p);
+                    setIsEditorOpen(true);
+                  }}
+                  onDelete={handleDeleteProduct}
+                  onAddToCart={handleAddToCart}
+                  onReExtract={handleReExtractProduct}
+                  onViewDetail={(p) => {
+                    setSelectedDetailProduct(p);
+                    setIsDetailOpen(true);
+                  }}
+                  layout={layoutMode}
+                />
+              ))}
+            </div>
+
+            {/* Pagination / Load More Bar */}
+            {filteredProducts.length > PRODUCTS_PER_PAGE && (
+              <div className="mt-10 mb-6 flex flex-col items-center justify-center space-y-4">
+                {/* Progress Indicator */}
+                <div className="w-full max-w-xs text-center">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-500 mb-1.5">
+                    <span>Mostrando {displayedProducts.length} de {filteredProducts.length} productos</span>
+                    <span>{Math.round((displayedProducts.length / filteredProducts.length) * 100)}%</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                      style={{ width: `${(displayedProducts.length / filteredProducts.length) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Actions: Cargar más & Mostrar todos */}
+                {hasMoreProducts ? (
+                  <div className="flex items-center gap-2.5">
+                    <button
+                      onClick={handleManualLoadMore}
+                      disabled={isLoadingMore}
+                      className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      {isLoadingMore ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                          <span>Cargando productos...</span>
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="w-4 h-4 text-emerald-400" />
+                          <span>Cargar más (+{Math.min(PRODUCTS_PER_PAGE, filteredProducts.length - displayedProducts.length)})</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={handleShowAllProducts}
+                      className="px-4 py-2.5 bg-white hover:bg-slate-100 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition-colors"
+                    >
+                      Mostrar todos ({filteredProducts.length})
+                    </button>
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full border border-emerald-200/60">
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Has llegado al final del catálogo</span>
+                  </div>
+                )}
+
+                {/* IntersectionObserver Sentinel for Infinite Scroll */}
+                <div ref={loadMoreSentinelRef} className="h-4 w-full pointer-events-none" />
+              </div>
+            )}
+          </>
         )}
 
       </main>

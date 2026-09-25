@@ -137,6 +137,45 @@
         "username",
         "customerId"
       ]
+    },
+    "DiagnosticLog": {
+      "title": "Diagnostic Error Log",
+      "description": "Critical client errors and load diagnostics saved to Firestore for remote debugging",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "operationType": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "sellerId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "userAgent": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string"
+        },
+        "details": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "error",
+        "timestamp"
+      ]
     }
   },
   "firestore": {
@@ -159,6 +198,10 @@
     "/customers/{customerId}": {
       "schema": "Customer",
       "description": "Customer profile and delivery details"
+    },
+    "/error_logs/{logId}": {
+      "schema": "DiagnosticLog",
+      "description": "Diagnostic error logs for remote troubleshooting"
     }
   }
 }

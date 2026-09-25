@@ -112,6 +112,88 @@ export function handleFirestoreError(
     path,
   };
   console.warn('Firestore Operation Info: ', JSON.stringify(errInfo));
+
+  // Log critical error to remote Firestore diagnostics in background
+  logCriticalErrorToFirestore(errMsg, {
+    operationType,
+    path,
+    details: errInfo.authInfo,
+  }).catch(() => {});
+}
+
+// In-memory set to prevent spamming duplicate logs in short time window
+const recentLoggedErrors = new Set<string>();
+
+/**
+ * Diagnostic error logging service:
+ * Records critical client/load errors to Firestore '/error_logs' for remote diagnosis.
+ */
+export async function logCriticalErrorToFirestore(
+  err: unknown,
+  context?: {
+    operationType?: OperationType | string;
+    path?: string | null;
+    sellerId?: string | null;
+    details?: any;
+  }
+): Promise<void> {
+  const errMsg = err instanceof Error ? err.message : String(err);
+
+  // Skip quota errors to avoid write loops and protect quotas
+  if (
+    errMsg.includes('resource-exhausted') ||
+    errMsg.includes('Quota limit exceeded') ||
+    errMsg.includes('quota') ||
+    isQuotaBlocked()
+  ) {
+    return;
+  }
+
+  const logKey = `${context?.operationType || 'UNKNOWN'}_${context?.path || ''}_${errMsg.slice(0, 100)}`;
+  if (recentLoggedErrors.has(logKey)) {
+    return;
+  }
+  recentLoggedErrors.add(logKey);
+  setTimeout(() => recentLoggedErrors.delete(logKey), 60000); // 1-minute throttle per unique error
+
+  const logId = `log_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+  const logData = {
+    id: logId,
+    error: errMsg.substring(0, 1500),
+    operationType: context?.operationType || 'CRITICAL_LOAD_ERROR',
+    path: context?.path || null,
+    sellerId: context?.sellerId || null,
+    userId: auth.currentUser?.uid || null,
+    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown',
+    url: typeof window !== 'undefined' ? window.location.href : '',
+    timestamp: new Date().toISOString(),
+    details: context?.details ? JSON.stringify(context.details).substring(0, 2000) : null,
+  };
+
+  try {
+    await setDoc(doc(db, 'error_logs', logId), sanitizeForFirestore(logData));
+  } catch (logErr) {
+    console.warn('Failed to record remote diagnostic log:', logErr);
+  }
+}
+
+/**
+ * Retrieve recent diagnostic error logs from Firestore for remote inspection
+ */
+export async function getRecentErrorLogsFromFirestore(
+  limitCount = 20
+): Promise<any[]> {
+  try {
+    const snap = await getDocs(collection(db, 'error_logs'));
+    const logs: any[] = [];
+    snap.forEach((d) => logs.push(d.data()));
+    return logs
+      .sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''))
+      .slice(0, limitCount);
+  } catch (err) {
+    console.warn('Could not fetch remote error logs:', err);
+    return [];
+  }
 }
 
 // Convert human username (e.g. "Chihuahua") to internal email
@@ -236,10 +318,6 @@ export async function saveStoreSettingsToFirestore(
   const path = `sellers/${sellerId}/settings/current`;
   setStoredItem(`cached_settings_${sellerId}`, settings).catch(() => {});
   setStoredItem('cached_settings_latest', settings).catch(() => {});
-
-  if (isQuotaBlocked()) {
-    return;
-  }
 
   try {
     const optimized = optimizeImagesForFirestore(settings);
@@ -415,7 +493,8 @@ export function partitionProductsIntoChunks(products: any[], maxChunkBytes = 550
 // Save Catalog to Firestore under seller account with atomic batch writes and chunking support
 export async function saveCatalogToFirestore(
   sellerId: string,
-  catalog: Catalog
+  catalog: Catalog,
+  force = false
 ): Promise<void> {
   const path = `sellers/${sellerId}/catalogs/${catalog.id}`;
   const deDuplicated = deDuplicateCatalog(catalog);
@@ -425,14 +504,10 @@ export async function saveCatalogToFirestore(
   setStoredItem(`cached_catalogs_${sellerId}`, [cleaned]).catch(() => {});
   setStoredItem('cached_catalogs_latest', [cleaned]).catch(() => {});
 
-  if (isQuotaBlocked()) {
-    return;
-  }
-
   try {
     // Generate lightweight fingerprint to avoid redundant writes
     const fingerprint = `${catalog.id}_${cleaned.title}_${cleaned.products?.length}_${JSON.stringify(cleaned).length}`;
-    if (savedCatalogFingerprints.get(catalog.id) === fingerprint) {
+    if (!force && savedCatalogFingerprints.get(catalog.id) === fingerprint) {
       return; // Skip identical write to protect Firestore write quota
     }
 
@@ -525,11 +600,21 @@ export async function saveCatalogToFirestore(
 // Save All Catalogs sequentially to avoid overloading the WebChannel write stream
 export async function saveAllCatalogsToFirestore(
   sellerId: string,
-  catalogs: Catalog[]
+  catalogs: Catalog[],
+  force = false
 ): Promise<void> {
   for (const cat of catalogs) {
-    await saveCatalogToFirestore(sellerId, cat);
+    await saveCatalogToFirestore(sellerId, cat, force);
   }
+}
+
+// Force immediate full cloud synchronization
+export async function syncCatalogNowToFirestore(
+  sellerId: string,
+  catalogs: Catalog[]
+): Promise<void> {
+  savedCatalogFingerprints.clear();
+  await saveAllCatalogsToFirestore(sellerId, catalogs, true);
 }
 
 // Delete Catalog from Firestore
