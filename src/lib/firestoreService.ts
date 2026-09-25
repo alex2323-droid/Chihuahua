@@ -22,7 +22,43 @@ import { getStoredItem, setStoredItem } from './indexedDbStorage';
 
 // In-memory cache for chunked catalogs to avoid redundant network reads and reduce Firestore quota usage
 const chunkedCatalogCache = new Map<string, { updatedAt: string; products: any[] }>();
+const savedCatalogFingerprints = new Map<string, string>();
 
+let isWriteQuotaExhausted = false;
+let quotaExhaustedTimestamp = 0;
+const QUOTA_COOLDOWN_MS = 3 * 60 * 1000; // 3 minutes cooldown
+
+export function markQuotaExhausted() {
+  isWriteQuotaExhausted = true;
+  quotaExhaustedTimestamp = Date.now();
+  try {
+    sessionStorage.setItem('firestore_quota_exhausted', String(quotaExhaustedTimestamp));
+  } catch {}
+}
+
+export function isQuotaBlocked(): boolean {
+  if (!isWriteQuotaExhausted) {
+    try {
+      const stored = sessionStorage.getItem('firestore_quota_exhausted');
+      if (stored) {
+        const ts = Number(stored);
+        if (Date.now() - ts < QUOTA_COOLDOWN_MS) {
+          isWriteQuotaExhausted = true;
+          quotaExhaustedTimestamp = ts;
+          return true;
+        } else {
+          sessionStorage.removeItem('firestore_quota_exhausted');
+        }
+      }
+    } catch {}
+    return false;
+  }
+  if (Date.now() - quotaExhaustedTimestamp > QUOTA_COOLDOWN_MS) {
+    isWriteQuotaExhausted = false;
+    return false;
+  }
+  return true;
+}
 
 export enum OperationType {
   CREATE = 'create',
@@ -51,8 +87,20 @@ export function handleFirestoreError(
   operationType: OperationType,
   path: string | null
 ) {
+  const errMsg = error instanceof Error ? error.message : String(error);
+  const isQuota =
+    errMsg.includes('resource-exhausted') ||
+    errMsg.includes('Quota limit exceeded') ||
+    errMsg.includes('quota');
+
+  if (isQuota) {
+    markQuotaExhausted();
+    console.warn(`Firestore write quota reached. Switched seamlessly to local storage.`);
+    return;
+  }
+
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errMsg,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
@@ -63,8 +111,7 @@ export function handleFirestoreError(
     operationType,
     path,
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  console.warn('Firestore Operation Info: ', JSON.stringify(errInfo));
 }
 
 // Convert human username (e.g. "Chihuahua") to internal email
@@ -187,6 +234,13 @@ export async function saveStoreSettingsToFirestore(
   settings: StoreSettings
 ): Promise<void> {
   const path = `sellers/${sellerId}/settings/current`;
+  setStoredItem(`cached_settings_${sellerId}`, settings).catch(() => {});
+  setStoredItem('cached_settings_latest', settings).catch(() => {});
+
+  if (isQuotaBlocked()) {
+    return;
+  }
+
   try {
     const optimized = optimizeImagesForFirestore(settings);
     const payload = sanitizeForFirestore({
@@ -301,17 +355,33 @@ export function rehydrateProduct(product: any): any {
 
 export function deDuplicateCatalog(catalog: Catalog): Catalog {
   if (!catalog || !catalog.products) return catalog;
+  const seenIds = new Set<string>();
+  const uniqueProducts: Product[] = [];
+  for (const p of catalog.products) {
+    if (p && p.id && !seenIds.has(p.id)) {
+      seenIds.add(p.id);
+      uniqueProducts.push(deDuplicateProduct(p));
+    }
+  }
   return {
     ...catalog,
-    products: catalog.products.map(deDuplicateProduct),
+    products: uniqueProducts,
   };
 }
 
 export function rehydrateCatalog(catalog: Catalog): Catalog {
   if (!catalog || !catalog.products) return catalog;
+  const seenIds = new Set<string>();
+  const uniqueProducts: Product[] = [];
+  for (const p of catalog.products) {
+    if (p && p.id && !seenIds.has(p.id)) {
+      seenIds.add(p.id);
+      uniqueProducts.push(rehydrateProduct(p));
+    }
+  }
   return {
     ...catalog,
-    products: catalog.products.map(rehydrateProduct),
+    products: uniqueProducts,
   };
 }
 
@@ -348,9 +418,23 @@ export async function saveCatalogToFirestore(
   catalog: Catalog
 ): Promise<void> {
   const path = `sellers/${sellerId}/catalogs/${catalog.id}`;
+  const deDuplicated = deDuplicateCatalog(catalog);
+  const cleaned = sanitizeForFirestore(deDuplicated);
+
+  // Always cache locally in IndexedDB first
+  setStoredItem(`cached_catalogs_${sellerId}`, [cleaned]).catch(() => {});
+  setStoredItem('cached_catalogs_latest', [cleaned]).catch(() => {});
+
+  if (isQuotaBlocked()) {
+    return;
+  }
+
   try {
-    const deDuplicated = deDuplicateCatalog(catalog);
-    const cleaned = sanitizeForFirestore(deDuplicated);
+    // Generate lightweight fingerprint to avoid redundant writes
+    const fingerprint = `${catalog.id}_${cleaned.title}_${cleaned.products?.length}_${JSON.stringify(cleaned).length}`;
+    if (savedCatalogFingerprints.get(catalog.id) === fingerprint) {
+      return; // Skip identical write to protect Firestore write quota
+    }
 
     // Calculate serialized total size
     const rawLength = JSON.stringify(cleaned).length;
@@ -367,6 +451,7 @@ export async function saveCatalogToFirestore(
       const batch = writeBatch(db);
       batch.set(doc(db, 'sellers', sellerId, 'catalogs', catalog.id), payload);
       await batch.commit();
+      savedCatalogFingerprints.set(catalog.id, fingerprint);
 
       // Clean up any old chunks if previously chunked
       getDocs(collection(db, 'sellers', sellerId, 'catalogs', catalog.id, 'chunks'))
@@ -416,6 +501,7 @@ export async function saveCatalogToFirestore(
 
     // Commit all chunks and main document atomically in a SINGLE network call!
     await batch.commit();
+    savedCatalogFingerprints.set(catalog.id, fingerprint);
 
     // Clean up any extra old chunks if chunk count decreased
     getDocs(collection(db, 'sellers', sellerId, 'catalogs', catalog.id, 'chunks'))

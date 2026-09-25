@@ -403,18 +403,18 @@ export default function App() {
         clearTimeout(saveCatalogTimeoutRef.current);
       }
 
-      // Debounce auto-save by 800ms to consolidate user edits and prevent stream congestion
+      // Debounce auto-save by 2000ms to consolidate user edits and protect write quota
       saveCatalogTimeoutRef.current = setTimeout(async () => {
         lastSavedCatalogsRef.current = catalogsStr;
         setIsSyncing(true);
         try {
           await saveAllCatalogsToFirestore(sellerUid, catalogs);
         } catch (err) {
-          console.error('Cloud catalog save error:', err);
+          console.warn('Cloud catalog save error (persisted locally):', err);
         } finally {
           setIsSyncing(false);
         }
-      }, 800);
+      }, 2000);
     }
 
     return () => {
@@ -772,10 +772,18 @@ export default function App() {
     }
   };
 
-  // Filter products
-  const categories = ['all', ...Array.from(new Set(activeCatalog?.products.map((p) => p.category) || []))];
+  // Filter products strictly deduplicated by product ID
+  const rawCatalogProducts = activeCatalog?.products || [];
+  const seenCatalogProductIds = new Set<string>();
+  const uniqueCatalogProducts = rawCatalogProducts.filter((p) => {
+    if (!p || !p.id || seenCatalogProductIds.has(p.id)) return false;
+    seenCatalogProductIds.add(p.id);
+    return true;
+  });
 
-  const filteredProducts = (activeCatalog?.products || []).filter((p) => {
+  const categories = ['all', ...Array.from(new Set(uniqueCatalogProducts.map((p) => p.category).filter(Boolean)))];
+
+  const filteredProducts = uniqueCatalogProducts.filter((p) => {
     const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
     const query = searchQuery.trim().toLowerCase();
     const matchesSearch =
