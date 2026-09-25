@@ -87,10 +87,18 @@ export default function App() {
         }
       } catch {}
     }
-    return [];
+    return [
+      {
+        id: 'cat_principal',
+        title: 'Catálogo Principal',
+        description: 'Todos los productos',
+        products: [],
+        createdAt: new Date().toISOString(),
+      },
+    ];
   });
 
-  const [isLoadingCatalogs, setIsLoadingCatalogs] = useState<boolean>(() => catalogs.length === 0);
+  const [isLoadingCatalogs, setIsLoadingCatalogs] = useState<boolean>(() => false);
   const [activeCatalogId, setActiveCatalogId] = useState<string>(() => catalogs[0]?.id || 'cat_principal');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCustomerMode, setIsCustomerMode] = useState<boolean>(() => {
@@ -516,7 +524,36 @@ export default function App() {
   const activeCatalog =
     catalogs.find((c) => c.id === activeCatalogId) ||
     catalogs.find((c) => c.products && c.products.length > 0) ||
-    catalogs[0];
+    catalogs[0] || {
+      id: 'cat_principal',
+      title: 'Catálogo Principal',
+      description: 'Todos los productos',
+      products: [],
+      createdAt: new Date().toISOString(),
+    };
+
+  // Helper to ensure at least one catalog exists and returns valid target
+  const ensureCatalogTarget = (catalogsList: Catalog[], targetId?: string): { list: Catalog[]; targetId: string } => {
+    if (!catalogsList || catalogsList.length === 0) {
+      const defaultId = targetId || 'cat_principal';
+      return {
+        list: [
+          {
+            id: defaultId,
+            title: 'Catálogo Principal',
+            description: 'Todos los productos',
+            products: [],
+            createdAt: new Date().toISOString(),
+          },
+        ],
+        targetId: defaultId,
+      };
+    }
+    const currentId = targetId && catalogsList.some((c) => c.id === targetId)
+      ? targetId
+      : catalogsList[0].id;
+    return { list: catalogsList, targetId: currentId };
+  };
 
   // Extraction handlers
   const handleProductExtracted = async (product: Product) => {
@@ -540,13 +577,15 @@ export default function App() {
       imageDetails,
     };
     const optimized = await optimizeProductImageSize(withSku);
-    setCatalogs((prevCatalogs) =>
-      prevCatalogs.map((cat) =>
-        cat.id === activeCatalogId
-          ? { ...cat, products: [optimized, ...cat.products] }
+    setCatalogs((prevCatalogs) => {
+      const { list, targetId } = ensureCatalogTarget(prevCatalogs, activeCatalogId);
+      setActiveCatalogId(targetId);
+      return list.map((cat) =>
+        cat.id === targetId
+          ? { ...cat, products: [optimized, ...(cat.products || []).filter((p) => p.id !== optimized.id)] }
           : cat
-      )
-    );
+      );
+    });
   };
 
   const handleBatchExtracted = async (newProducts: Product[]) => {
@@ -572,13 +611,16 @@ export default function App() {
       };
     });
     const optimized = await Promise.all(withSkus.map((p) => optimizeProductImageSize(p)));
-    setCatalogs((prevCatalogs) =>
-      prevCatalogs.map((cat) =>
-        cat.id === activeCatalogId
-          ? { ...cat, products: [...optimized, ...cat.products] }
+    setCatalogs((prevCatalogs) => {
+      const { list, targetId } = ensureCatalogTarget(prevCatalogs, activeCatalogId);
+      setActiveCatalogId(targetId);
+      const newIds = new Set(optimized.map((p) => p.id));
+      return list.map((cat) =>
+        cat.id === targetId
+          ? { ...cat, products: [...optimized, ...(cat.products || []).filter((p) => !newIds.has(p.id))] }
           : cat
-      )
-    );
+      );
+    });
   };
 
   // Re-extract single product photo
@@ -626,26 +668,20 @@ export default function App() {
     };
 
     const optimized = await optimizeProductImageSize(preparedProduct);
-    setCatalogs((prevCatalogs) =>
-      prevCatalogs.map((cat) => {
-        if (cat.id !== activeCatalogId) return cat;
-
+    setCatalogs((prevCatalogs) => {
+      const { list, targetId } = ensureCatalogTarget(prevCatalogs, activeCatalogId);
+      setActiveCatalogId(targetId);
+      return list.map((cat) => {
+        if (cat.id !== targetId) return cat;
         const exists = cat.products.some((p) => p.id === optimized.id);
-        if (exists) {
-          return {
-            ...cat,
-            products: cat.products.map((p) =>
-              p.id === optimized.id ? optimized : p
-            ),
-          };
-        } else {
-          return {
-            ...cat,
-            products: [optimized, ...cat.products],
-          };
-        }
-      })
-    );
+        return {
+          ...cat,
+          products: exists
+            ? cat.products.map((p) => (p.id === optimized.id ? optimized : p))
+            : [optimized, ...(cat.products || [])],
+        };
+      });
+    });
   };
 
   const handleDeleteProduct = (id: string) => {
