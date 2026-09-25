@@ -112,8 +112,8 @@ export function getCategoryFallbackImage(titleAndDesc: string): string {
  */
 export function compressImageBase64(
   base64Str: string,
-  maxDim = 1000,
-  quality = 0.82
+  maxDim = 1200,
+  quality = 0.85
 ): Promise<string> {
   return new Promise((resolve) => {
     if (!base64Str || !base64Str.startsWith('data:image')) {
@@ -127,7 +127,7 @@ export function compressImageBase64(
       let width = img.width;
       let height = img.height;
 
-      // Always process the image to convert formats to compressed jpeg, unless it's already tiny and small-scale
+      // Maintain crisp 1200px HD resolution for retina displays
       if (width > height) {
         if (width > maxDim) {
           height = Math.round((height * maxDim) / width);
@@ -152,7 +152,14 @@ export function compressImageBase64(
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', quality));
+
+      // Prefer WebP format for 30% better compression at equal visual fidelity
+      const webpUrl = canvas.toDataURL('image/webp', quality);
+      if (webpUrl && webpUrl.startsWith('data:image/webp')) {
+        resolve(webpUrl);
+      } else {
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      }
     };
     img.onerror = () => resolve(base64Str);
     img.src = base64Str;
@@ -230,7 +237,13 @@ export function cropImageBase64(
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetWidth, targetHeight);
-      resolve(canvas.toDataURL('image/jpeg', 0.82));
+
+      const webpUrl = canvas.toDataURL('image/webp', 0.85);
+      if (webpUrl && webpUrl.startsWith('data:image/webp')) {
+        resolve(webpUrl);
+      } else {
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      }
     };
     img.onerror = () => resolve(base64Str);
     img.src = base64Str;

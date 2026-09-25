@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
-import { UrlExtractorBar } from './components/UrlExtractorBar';
 import { ProductCard } from './components/ProductCard';
 import { ProductEditorModal } from './components/ProductEditorModal';
 import { StoreSettingsDrawer } from './components/StoreSettingsDrawer';
@@ -992,7 +991,10 @@ export default function App() {
         activeCatalogId={activeCatalogId}
         onSelectCatalog={setActiveCatalogId}
         onCreateCatalog={handleCreateNewCatalog}
-        onOpenExtractor={() => setIsExtractorOpen(true)}
+        onAddProduct={() => {
+          setEditingProduct(null);
+          setIsEditorOpen(true);
+        }}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onPrint={handlePrint}
         onToggleCustomerMode={() => setIsCustomerMode(!isCustomerMode)}
@@ -1169,30 +1171,14 @@ export default function App() {
             {!effectiveCustomerMode && (
               <div className="flex flex-wrap items-center gap-3">
                 <button
-                  onClick={() => setIsExtractorOpen(true)}
-                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Pegar Enlace de Producto</span>
-                </button>
-
-                <button
-                  onClick={() => setIsExtractorOpen(true)}
-                  className="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2"
-                >
-                  <Camera className="w-4 h-4" />
-                  <span>Subir Captura (IA)</span>
-                </button>
-
-                <button
                   onClick={() => {
                     setEditingProduct(null);
                     setIsEditorOpen(true);
                   }}
-                  className="px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white font-semibold text-xs rounded-xl backdrop-blur-md border border-white/20 transition-colors flex items-center gap-2"
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
                 >
-                  <PlusCircle className="w-4 h-4" />
-                  <span>Crear Manualmente</span>
+                  <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span>+ Agregar Producto Manualmente</span>
                 </button>
 
                 <button
@@ -1458,13 +1444,6 @@ export default function App() {
           handleLoginSuccess(name, role);
         }}
         settings={settings}
-      />
-
-      <UrlExtractorBar
-        isOpen={isExtractorOpen}
-        onClose={() => setIsExtractorOpen(false)}
-        onProductExtracted={handleProductExtracted}
-        onBatchExtracted={handleBatchExtracted}
       />
 
       <ProductEditorModal

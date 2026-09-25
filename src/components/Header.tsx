@@ -23,7 +23,7 @@ interface HeaderProps {
   activeCatalogId: string;
   onSelectCatalog: (id: string) => void;
   onCreateCatalog: () => void;
-  onOpenExtractor: () => void;
+  onAddProduct: () => void;
   onOpenSettings: () => void;
   onPrint: () => void;
   onToggleCustomerMode: () => void;
@@ -43,7 +43,7 @@ export const Header: React.FC<HeaderProps> = ({
   activeCatalogId,
   onSelectCatalog,
   onCreateCatalog,
-  onOpenExtractor,
+  onAddProduct,
   onOpenSettings,
   onPrint,
   onToggleCustomerMode,
@@ -207,11 +207,11 @@ export const Header: React.FC<HeaderProps> = ({
             ) : (
               <>
                 <button
-                  onClick={onOpenExtractor}
-                  className="hidden sm:flex px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-all items-center gap-1.5"
+                  onClick={onAddProduct}
+                  className="hidden sm:flex px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-xs transition-all items-center gap-1.5"
                 >
                   <PlusCircle className="w-4 h-4" />
-                  <span>Pegar URL Producto</span>
+                  <span>+ Agregar Producto</span>
                 </button>
 
                 <button
