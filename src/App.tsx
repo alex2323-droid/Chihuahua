@@ -79,47 +79,32 @@ const addDeletedProductId = (id: string) => {
   } catch {}
 };
 
-// Helper to safely merge local state with cloud state so local edits/additions are NEVER wiped out
+// Helper to safely merge local state with cloud state so all products remain synchronized across all devices
 const mergeLocalAndCloudCatalogs = (localCats: Catalog[], cloudCats: Catalog[]): Catalog[] => {
   if (!cloudCats || cloudCats.length === 0) return localCats;
   if (!localCats || localCats.length === 0) return cloudCats;
 
-  const deletedIds = getDeletedProductIds();
   const mergedMap = new Map<string, Catalog>();
 
-  // Start with cloud catalogs
+  // Start with authoritative cloud catalogs
   cloudCats.forEach((cCat) => {
-    const cleanProducts = (cCat.products || []).filter((p) => !deletedIds.has(p.id));
-    mergedMap.set(cCat.id, { ...cCat, products: cleanProducts });
+    mergedMap.set(cCat.id, { ...cCat, products: cCat.products || [] });
   });
 
-  // Merge local catalogs into cloud catalogs
+  // Merge any local-only unsaved catalogs or unsaved products into cloud state
   localCats.forEach((lCat) => {
     const existing = mergedMap.get(lCat.id);
     if (!existing) {
-      const cleanProducts = (lCat.products || []).filter((p) => !deletedIds.has(p.id));
-      mergedMap.set(lCat.id, { ...lCat, products: cleanProducts });
+      mergedMap.set(lCat.id, { ...lCat, products: lCat.products || [] });
     } else {
       const cloudProductsMap = new Map<string, Product>();
       existing.products.forEach((p) => cloudProductsMap.set(p.id, p));
 
-      const finalProducts: Product[] = [];
+      const finalProducts: Product[] = [...existing.products];
 
-      // Add cloud products except deleted
-      existing.products.forEach((p) => {
-        if (!deletedIds.has(p.id)) {
-          const lProd = lCat.products?.find((lp) => lp.id === p.id);
-          if (lProd) {
-            finalProducts.push({ ...p, ...lProd });
-          } else {
-            finalProducts.push(p);
-          }
-        }
-      });
-
-      // Add local products not yet in cloud and not deleted
+      // Add local products not yet in cloud
       (lCat.products || []).forEach((lProd) => {
-        if (!cloudProductsMap.has(lProd.id) && !deletedIds.has(lProd.id)) {
+        if (!cloudProductsMap.has(lProd.id)) {
           finalProducts.push(lProd);
         }
       });
@@ -964,7 +949,7 @@ export default function App() {
   });
 
   // Performance Pagination / Load More Strategy
-  const PRODUCTS_PER_PAGE = 12;
+  const PRODUCTS_PER_PAGE = 100;
   const [visibleProductsCount, setVisibleProductsCount] = useState<number>(PRODUCTS_PER_PAGE);
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
