@@ -59,6 +59,83 @@ import {
   Loader2,
 } from 'lucide-react';
 
+// Deleted product ID tracking helpers
+const getDeletedProductIds = (): Set<string> => {
+  try {
+    const raw = localStorage.getItem('catalogcraft_deleted_pids');
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) return new Set(arr);
+    }
+  } catch {}
+  return new Set();
+};
+
+const addDeletedProductId = (id: string) => {
+  const current = getDeletedProductIds();
+  current.add(id);
+  try {
+    localStorage.setItem('catalogcraft_deleted_pids', JSON.stringify(Array.from(current)));
+  } catch {}
+};
+
+// Helper to safely merge local state with cloud state so local edits/additions are NEVER wiped out
+const mergeLocalAndCloudCatalogs = (localCats: Catalog[], cloudCats: Catalog[]): Catalog[] => {
+  if (!cloudCats || cloudCats.length === 0) return localCats;
+  if (!localCats || localCats.length === 0) return cloudCats;
+
+  const deletedIds = getDeletedProductIds();
+  const mergedMap = new Map<string, Catalog>();
+
+  // Start with cloud catalogs
+  cloudCats.forEach((cCat) => {
+    const cleanProducts = (cCat.products || []).filter((p) => !deletedIds.has(p.id));
+    mergedMap.set(cCat.id, { ...cCat, products: cleanProducts });
+  });
+
+  // Merge local catalogs into cloud catalogs
+  localCats.forEach((lCat) => {
+    const existing = mergedMap.get(lCat.id);
+    if (!existing) {
+      const cleanProducts = (lCat.products || []).filter((p) => !deletedIds.has(p.id));
+      mergedMap.set(lCat.id, { ...lCat, products: cleanProducts });
+    } else {
+      const cloudProductsMap = new Map<string, Product>();
+      existing.products.forEach((p) => cloudProductsMap.set(p.id, p));
+
+      const finalProducts: Product[] = [];
+
+      // Add cloud products except deleted
+      existing.products.forEach((p) => {
+        if (!deletedIds.has(p.id)) {
+          const lProd = lCat.products?.find((lp) => lp.id === p.id);
+          if (lProd) {
+            finalProducts.push({ ...p, ...lProd });
+          } else {
+            finalProducts.push(p);
+          }
+        }
+      });
+
+      // Add local products not yet in cloud and not deleted
+      (lCat.products || []).forEach((lProd) => {
+        if (!cloudProductsMap.has(lProd.id) && !deletedIds.has(lProd.id)) {
+          finalProducts.push(lProd);
+        }
+      });
+
+      mergedMap.set(lCat.id, {
+        ...existing,
+        title: lCat.title || existing.title,
+        description: lCat.description || existing.description,
+        products: finalProducts,
+      });
+    }
+  });
+
+  return Array.from(mergedMap.values());
+};
+
 export default function App() {
   // State initialization with localStorage fallback
   const [settings, setSettings] = useState<StoreSettings>(() => {
@@ -75,20 +152,16 @@ export default function App() {
   });
 
   const [catalogs, setCatalogs] = useState<Catalog[]>(() => {
-    const saved = localStorage.getItem('catalogcraft_catalogs');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Discard historical demo placeholders
-          const hasDemos = parsed.some((c: any) =>
-            c.products?.some((p: any) => p.id?.startsWith('demo_') || p.title?.includes('Zapatillas Urban Minimalist'))
-          );
-          if (!hasDemos) {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('catalogcraft_catalogs');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
             return parsed;
           }
-        }
-      } catch {}
+        } catch {}
+      }
     }
     return [
       {
@@ -311,22 +384,19 @@ export default function App() {
     const unsubCatalogs = subscribeToSellerCatalogs(targetUid, (cloudCatalogs) => {
       setIsLoadingCatalogs(false);
       if (cloudCatalogs && cloudCatalogs.length > 0) {
-        const cloudStr = JSON.stringify(cloudCatalogs);
         isRemoteCatalogUpdateRef.current = true;
         setCatalogs((prev) => {
-          const currentCount = prev.reduce((acc, c) => acc + (c.products?.length || 0), 0);
-          const cloudCount = cloudCatalogs.reduce((acc, c) => acc + (c.products?.length || 0), 0);
-          // If cloud has 0 products but local state already has products, keep local products
-          if (cloudCount === 0 && currentCount > 0) {
-            return prev;
-          }
-          return cloudCatalogs;
+          const merged = mergeLocalAndCloudCatalogs(prev, cloudCatalogs);
+          try {
+            localStorage.setItem('catalogcraft_catalogs', JSON.stringify(merged));
+          } catch {}
+          setStoredItem('cached_catalogs_latest', merged).catch(() => {});
+          setStoredItem(`cached_catalogs_${targetUid}`, merged).catch(() => {});
+          return merged;
         });
-        setStoredItem('cached_catalogs_latest', cloudCatalogs).catch(() => {});
-        setStoredItem(`cached_catalogs_${targetUid}`, cloudCatalogs).catch(() => {});
         setActiveCatalogId((prev) => {
           if (!prev || !cloudCatalogs.some((c) => c.id === prev)) {
-            return cloudCatalogs[0].id;
+            return cloudCatalogs[0]?.id || 'cat_principal';
           }
           return prev;
         });
@@ -535,10 +605,33 @@ export default function App() {
       createdAt: new Date().toISOString(),
     };
 
-  // Force manual cloud sync handler
+  // Synchronous local + cloud sync dispatchers
   const [syncToastMessage, setSyncToastMessage] = useState<string | null>(null);
 
+  const dispatchImmediateSettingsSync = (nextSettings: StoreSettings) => {
+    try {
+      localStorage.setItem('catalogcraft_settings', JSON.stringify(nextSettings));
+    } catch {}
+    setStoredItem('cached_settings_latest', nextSettings).catch(() => {});
+
+    const targetUid = isSeller && sellerUid ? sellerUid : (activeViewingSellerUid || 'bdy3TcO5IAOpmkQEy8zLGpEkENG3');
+    if (targetUid) {
+      setIsSyncing(true);
+      saveStoreSettingsToFirestore(targetUid, nextSettings)
+        .then(() => {
+          lastSavedSettingsRef.current = JSON.stringify(nextSettings);
+        })
+        .catch((e) => console.warn('Background settings sync warning:', e))
+        .finally(() => setIsSyncing(false));
+    }
+  };
+
   const dispatchImmediateCatalogSync = (nextCatalogs: Catalog[]) => {
+    try {
+      localStorage.setItem('catalogcraft_catalogs', JSON.stringify(nextCatalogs));
+    } catch {}
+    setStoredItem('cached_catalogs_latest', nextCatalogs).catch(() => {});
+
     const targetUid = isSeller && sellerUid ? sellerUid : (activeViewingSellerUid || 'bdy3TcO5IAOpmkQEy8zLGpEkENG3');
     if (targetUid && nextCatalogs.length > 0) {
       setIsSyncing(true);
@@ -546,7 +639,7 @@ export default function App() {
         .then(() => {
           lastSavedCatalogsRef.current = JSON.stringify(nextCatalogs);
         })
-        .catch((e) => console.warn('Background immediate sync error:', e))
+        .catch((e) => console.warn('Background catalog sync warning:', e))
         .finally(() => setIsSyncing(false));
     }
   };
@@ -720,6 +813,7 @@ export default function App() {
   };
 
   const handleDeleteProduct = (id: string) => {
+    addDeletedProductId(id);
     const updated = catalogs.map((cat) =>
       cat.id === activeCatalogId
         ? { ...cat, products: cat.products.filter((p) => p.id !== id) }
@@ -1460,7 +1554,10 @@ export default function App() {
         isOpen={isSettingsOpen}
         settings={settings}
         onClose={() => setIsSettingsOpen(false)}
-        onSave={setSettings}
+        onSave={(newSettings) => {
+          setSettings(newSettings);
+          dispatchImmediateSettingsSync(newSettings);
+        }}
       />
 
       <WhatsAppCartDrawer
