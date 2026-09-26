@@ -547,9 +547,19 @@ export function rehydrateProduct(product: any): any {
     }
   }
 
-  // Safe fallback if primary image is empty
-  if (!copy.image) {
-    copy.image = copy.imageDetails?.[0]?.url || copy.images?.[0] || "";
+  // If primary image is still a sentinel or empty, pick the first real image found
+  if (!copy.image || copy.image.startsWith("__SAME_AS") || copy.image.startsWith("__DET_")) {
+    const fromDetail = copy.imageDetails?.find((d: any) => d?.url && !d.url.startsWith("__"))?.url;
+    const fromImages = copy.images?.find((img: any) => typeof img === 'string' && img && !img.startsWith("__"));
+    copy.image = fromDetail || fromImages || "";
+  }
+
+  // Ensure images array contains real URLs
+  if (Array.isArray(copy.images)) {
+    copy.images = copy.images.filter((img: any) => typeof img === 'string' && img && !img.startsWith("__"));
+    if (copy.images.length === 0 && copy.image && !copy.image.startsWith("__")) {
+      copy.images = [copy.image];
+    }
   }
 
   return copy;
@@ -862,10 +872,11 @@ export function subscribeToSellerCatalogs(
       if (cached && !isUnsubscribed) {
         const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const fingerprint = `${parsed.length}_${parsed.reduce((s, c) => s + (c.products?.length || 0), 0)}`;
+          const rehydratedList = (parsed as Catalog[]).map(rehydrateCatalog);
+          const fingerprint = `${rehydratedList.length}_${rehydratedList.reduce((s, c) => s + (c.products?.length || 0), 0)}`;
           if (fingerprint !== lastKnownFingerprint) {
             lastKnownFingerprint = fingerprint;
-            onData(parsed as Catalog[]);
+            onData(rehydratedList);
           }
         }
       }

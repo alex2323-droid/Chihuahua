@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Product, StoreSettings } from '../types/catalog';
 import { isLogoUrl, getCategoryFallbackImage } from '../utils/imageUtils';
+import { rehydrateProduct } from '../lib/firestoreService';
 
 interface ProductCardProps {
   product: Product;
@@ -26,7 +27,7 @@ interface ProductCardProps {
   layout?: 'grid-3' | 'grid-2' | 'grid-4' | 'list' | 'story';
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({
+const ProductCardBase: React.FC<ProductCardProps> = ({
   product,
   settings,
   isCustomerMode = false,
@@ -42,11 +43,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const resolveRealImage = (prod: Product): string => {
-    let raw = prod.image || '';
+    const rehydrated = rehydrateProduct(prod);
+    let raw = rehydrated.image || '';
     if (!raw || raw.startsWith('__SAME_AS') || raw.startsWith('__DET_')) {
       raw =
-        prod.imageDetails?.[0]?.url ||
-        (Array.isArray(prod.images) ? prod.images[0] : '') ||
+        rehydrated.imageDetails?.[0]?.url ||
+        (Array.isArray(rehydrated.images) ? rehydrated.images[0] : '') ||
         '';
       if (raw.startsWith('__SAME_AS') || raw.startsWith('__DET_')) {
         raw = '';
@@ -487,3 +489,102 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     </div>
   );
 };
+
+const areProductCardPropsEqual = (
+  prevProps: ProductCardProps,
+  nextProps: ProductCardProps
+): boolean => {
+  // 1. Structural mode & layout checks
+  if (prevProps.isCustomerMode !== nextProps.isCustomerMode) return false;
+  if (prevProps.layout !== nextProps.layout) return false;
+
+  // 2. Store settings visual influences
+  const pSet = prevProps.settings;
+  const nSet = nextProps.settings;
+  if (
+    pSet.themeColor !== nSet.themeColor ||
+    pSet.currencySymbol !== nSet.currencySymbol ||
+    pSet.storeName !== nSet.storeName ||
+    pSet.whatsappNumber !== nSet.whatsappNumber
+  ) {
+    return false;
+  }
+
+  // 3. Product reference equality
+  const p = prevProps.product;
+  const n = nextProps.product;
+  if (p === n) return true;
+
+  // 4. Product scalar fields comparison
+  if (
+    p.id !== n.id ||
+    p.title !== n.title ||
+    p.price !== n.price ||
+    p.originalPrice !== n.originalPrice ||
+    p.currency !== n.currency ||
+    p.image !== n.image ||
+    p.description !== n.description ||
+    p.category !== n.category ||
+    p.brand !== n.brand ||
+    p.badge !== n.badge ||
+    p.sku !== n.sku ||
+    p.sizes !== n.sizes ||
+    p.inStock !== n.inStock ||
+    p.sourceUrl !== n.sourceUrl
+  ) {
+    return false;
+  }
+
+  // 5. Product images array check
+  if (p.images !== n.images) {
+    const pImgs = p.images;
+    const nImgs = n.images;
+    const pLen = pImgs?.length || 0;
+    const nLen = nImgs?.length || 0;
+    if (pLen !== nLen) return false;
+    for (let i = 0; i < pLen; i++) {
+      if (pImgs![i] !== nImgs![i]) return false;
+    }
+  }
+
+  // 6. Product imageDetails array check
+  if (p.imageDetails !== n.imageDetails) {
+    const pDetails = p.imageDetails;
+    const nDetails = n.imageDetails;
+    const pDLen = pDetails?.length || 0;
+    const nDLen = nDetails?.length || 0;
+    if (pDLen !== nDLen) return false;
+    for (let i = 0; i < pDLen; i++) {
+      const pD = pDetails![i];
+      const nD = nDetails![i];
+      if (pD?.url !== nD?.url || pD?.code !== nD?.code || pD?.price !== nD?.price) {
+        return false;
+      }
+    }
+  }
+
+  // 7. Product sizeVariants array check
+  if (p.sizeVariants !== n.sizeVariants) {
+    const pVars = p.sizeVariants;
+    const nVars = n.sizeVariants;
+    const pVLen = pVars?.length || 0;
+    const nVLen = nVars?.length || 0;
+    if (pVLen !== nVLen) return false;
+    for (let i = 0; i < pVLen; i++) {
+      const pV = pVars![i];
+      const nV = nVars![i];
+      if (
+        pV?.size !== nV?.size ||
+        pV?.price !== nV?.price ||
+        pV?.originalPrice !== nV?.originalPrice
+      ) {
+        return false;
+      }
+    }
+  }
+
+  // Callback function identity changes (onEdit, onDelete, etc.) won't trigger re-render
+  return true;
+};
+
+export const ProductCard = React.memo(ProductCardBase, areProductCardPropsEqual);

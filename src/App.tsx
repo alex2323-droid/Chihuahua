@@ -27,6 +27,8 @@ import {
   loadCustomerProfileFromFirestore,
   getAllSellersFromFirestore,
   getPrimarySellerIdFromFirestore,
+  rehydrateCatalog,
+  rehydrateProduct,
   CustomerProfile,
 } from './lib/firestoreService';
 import { User } from 'firebase/auth';
@@ -88,21 +90,23 @@ const addDeletedProductId = (id: string) => {
 
 // Helper to safely merge local state with cloud state so all products remain synchronized across all devices
 const mergeLocalAndCloudCatalogs = (localCats: Catalog[], cloudCats: Catalog[]): Catalog[] => {
-  if (!cloudCats || cloudCats.length === 0) return localCats;
-  if (!localCats || localCats.length === 0) return cloudCats;
+  const safeCloud = (cloudCats || []).map(rehydrateCatalog);
+  const safeLocal = (localCats || []).map(rehydrateCatalog);
+  if (!safeCloud || safeCloud.length === 0) return safeLocal;
+  if (!safeLocal || safeLocal.length === 0) return safeCloud;
 
   const mergedMap = new Map<string, Catalog>();
 
   // Start with authoritative cloud catalogs
-  cloudCats.forEach((cCat) => {
-    mergedMap.set(cCat.id, { ...cCat, products: cCat.products || [] });
+  safeCloud.forEach((cCat) => {
+    mergedMap.set(cCat.id, { ...cCat, products: (cCat.products || []).map(rehydrateProduct) });
   });
 
   // Merge any local-only unsaved catalogs or unsaved products into cloud state
-  localCats.forEach((lCat) => {
+  safeLocal.forEach((lCat) => {
     const existing = mergedMap.get(lCat.id);
     if (!existing) {
-      mergedMap.set(lCat.id, { ...lCat, products: lCat.products || [] });
+      mergedMap.set(lCat.id, { ...lCat, products: (lCat.products || []).map(rehydrateProduct) });
     } else {
       const cloudProductsMap = new Map<string, Product>();
       existing.products.forEach((p) => cloudProductsMap.set(p.id, p));
@@ -112,7 +116,7 @@ const mergeLocalAndCloudCatalogs = (localCats: Catalog[], cloudCats: Catalog[]):
       // Add local products not yet in cloud
       (lCat.products || []).forEach((lProd) => {
         if (!cloudProductsMap.has(lProd.id)) {
-          finalProducts.push(lProd);
+          finalProducts.push(rehydrateProduct(lProd));
         }
       });
 
@@ -150,7 +154,7 @@ export default function App() {
         try {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed;
+            return (parsed as Catalog[]).map(rehydrateCatalog);
           }
         } catch {}
       }
