@@ -48,12 +48,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   const [imgSrc, setImgSrc] = useState(initialImg);
   const [imgError, setImgError] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Sync image state if product prop changes
   React.useEffect(() => {
     const isCurrentLogo = isLogoUrl(product.image);
     setImgSrc(isCurrentLogo ? fallbackDisplay : product.image);
     setImgError(false);
+    setIsLoaded(false);
   }, [product.image, product.title, product.description]);
 
   const handleImageError = () => {
@@ -124,12 +126,24 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           className="w-full sm:w-32 h-32 shrink-0 bg-slate-50 rounded-xl overflow-hidden relative border border-slate-100 cursor-pointer group/img"
         >
           {!imgError && imgSrc && imgSrc.trim() !== '' ? (
-            <img
-              src={imgSrc}
-              alt={product.title}
-              onError={handleImageError}
-              className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300"
-            />
+            <div className="w-full h-full relative">
+              {!isLoaded && (
+                <div className="absolute inset-0 bg-slate-200/80 animate-pulse flex items-center justify-center">
+                  <Tag className="w-5 h-5 text-slate-400 opacity-40 animate-pulse" />
+                </div>
+              )}
+              <img
+                src={imgSrc}
+                alt={product.title}
+                loading="lazy"
+                decoding="async"
+                onLoad={() => setIsLoaded(true)}
+                onError={handleImageError}
+                className={`w-full h-full object-cover group-hover/img:scale-105 transition-all duration-300 ${
+                  isLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
+              />
+            </div>
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400 text-xs text-center p-2">
               <Tag className="w-6 h-6 mb-1 opacity-40" />
@@ -259,12 +273,24 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         className="relative aspect-4/3 bg-slate-50 overflow-hidden border-b border-slate-100 cursor-pointer"
       >
         {!imgError && imgSrc && imgSrc.trim() !== '' ? (
-          <img
-            src={imgSrc}
-            alt={product.title}
-            onError={handleImageError}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
+          <div className="w-full h-full relative">
+            {!isLoaded && (
+              <div className="absolute inset-0 bg-slate-200/80 animate-pulse flex items-center justify-center">
+                <Tag className="w-8 h-8 text-slate-400 opacity-40 animate-pulse" />
+              </div>
+            )}
+            <img
+              src={imgSrc}
+              alt={product.title}
+              loading="lazy"
+              decoding="async"
+              onLoad={() => setIsLoaded(true)}
+              onError={handleImageError}
+              className={`w-full h-full object-cover group-hover:scale-105 transition-all duration-300 ${
+                isLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+          </div>
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400 p-4 text-center">
             <Tag className="w-8 h-8 mb-1 opacity-40" />

@@ -14,6 +14,7 @@ import {
 import { Product, SizeVariant, ProductImageDetail } from '../types/catalog';
 import { generateProductSku, generateSubCode } from '../utils/codeUtils';
 import { uploadBase64ImageToSupabase } from '../lib/supabase';
+import { compressImageBase64 } from '../utils/imageUtils';
 
 interface ProductEditorModalProps {
   product: Product | null;
@@ -171,9 +172,16 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
 
     filesToLoad.forEach((file, index) => {
       const reader = new FileReader();
-      reader.onload = () => {
+      reader.onload = async () => {
         if (reader.result) {
-          loadedImages[index] = reader.result as string;
+          const raw = reader.result as string;
+          try {
+            // Compress phone camera images down to crisp 1200px HD WebP (~120KB)
+            const compressed = await compressImageBase64(raw, 1200, 0.82);
+            loadedImages[index] = compressed;
+          } catch {
+            loadedImages[index] = raw;
+          }
         }
         loadedCount++;
         if (loadedCount === filesToLoad.length) {

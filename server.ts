@@ -673,7 +673,10 @@ async function scrapeMicrolinkUrl(targetUrl: string): Promise<ScrapedRawData> {
   throw new Error('Microlink failed to fetch URL metadata');
 }
 
-// Image Proxy Endpoint to bypass CORS / Hotlink restrictions on e-commerce CDNs
+// Image Proxy Endpoint with in-memory LRU cache to bypass CORS / Hotlink restrictions on e-commerce CDNs
+const imageProxyCache = new Map<string, { buffer: Buffer; contentType: string; timestamp: number }>();
+const MAX_PROXY_CACHE_ITEMS = 200;
+
 app.get('/api/proxy-image', async (req: Request, res: Response) => {
   try {
     const imageUrl = req.query.url as string;
@@ -683,13 +686,28 @@ app.get('/api/proxy-image', async (req: Request, res: Response) => {
     }
 
     const target = imageUrl.startsWith('//') ? `https:${imageUrl}` : imageUrl;
+
+    // Check memory cache
+    const cached = imageProxyCache.get(target);
+    if (cached && Date.now() - cached.timestamp < 1000 * 60 * 60 * 24 * 7) {
+      res.setHeader('Content-Type', cached.contentType);
+      res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400, immutable');
+      res.send(cached.buffer);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 7000);
+
     const fetchRes = await fetch(target, {
+      signal: controller.signal,
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
       },
     });
+    clearTimeout(timeout);
 
     if (!fetchRes.ok) {
       res.redirect(target);
@@ -697,11 +715,19 @@ app.get('/api/proxy-image', async (req: Request, res: Response) => {
     }
 
     const contentType = fetchRes.headers.get('content-type') || 'image/jpeg';
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Cache-Control', 'public, max-age=86400');
+    const arrayBuf = await fetchRes.arrayBuffer();
+    const buffer = Buffer.from(arrayBuf);
 
-    const buffer = await fetchRes.arrayBuffer();
-    res.send(Buffer.from(buffer));
+    // Save in cache (manage size)
+    if (imageProxyCache.size >= MAX_PROXY_CACHE_ITEMS) {
+      const oldestKey = imageProxyCache.keys().next().value;
+      if (oldestKey) imageProxyCache.delete(oldestKey);
+    }
+    imageProxyCache.set(target, { buffer, contentType, timestamp: Date.now() });
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400, immutable');
+    res.send(buffer);
   } catch {
     res.status(500).send('Image proxy error');
   }

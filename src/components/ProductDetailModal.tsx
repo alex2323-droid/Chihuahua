@@ -208,6 +208,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <img
                   src={displayImage}
                   alt={product.title}
+                  decoding="async"
                   className="w-full h-full object-cover cursor-zoom-in group-hover:scale-102 transition-transform duration-300"
                   onClick={() => setIsZoomed(true)}
                 />
@@ -257,7 +258,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                           : 'border-slate-700 opacity-60 hover:opacity-100'
                       }`}
                     >
-                      <img src={img} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
+                      <img
+                        src={img}
+                        alt={`Thumb ${idx + 1}`}
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover"
+                      />
                       {code && (
                         <div className="absolute bottom-0 inset-x-0 bg-slate-950/80 text-[8px] text-white font-extrabold text-center py-0.5 uppercase truncate px-0.5 leading-none">
                           {code}
