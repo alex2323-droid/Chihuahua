@@ -614,6 +614,25 @@ export function partitionProductsIntoChunks(products: any[], maxChunkBytes = 550
   return chunks;
 }
 
+/**
+ * Commits a Firestore WriteBatch with a strict timeout.
+ * Prevents the application from freezing when Firestore quota is exhausted (which causes internal SDK infinite backoff).
+ */
+async function commitBatchWithTimeout(batch: any, timeoutMs = 3500): Promise<void> {
+  let timer: any;
+  const timeoutPromise = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error('Firestore write quota limit reached or connection timed out'));
+    }, timeoutMs);
+  });
+
+  try {
+    await Promise.race([batch.commit(), timeoutPromise]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // Save Catalog to Firestore under seller account with atomic batch writes and chunking support
 export async function saveCatalogToFirestore(
   sellerId: string,
@@ -630,6 +649,11 @@ export async function saveCatalogToFirestore(
   // Always cache locally in IndexedDB first
   setStoredItem(`cached_catalogs_${sellerId}`, [cleaned]).catch(() => {});
   setStoredItem('cached_catalogs_latest', [cleaned]).catch(() => {});
+
+  // If write quota is already known to be exhausted, bypass slow Firestore retries
+  if (isQuotaBlocked()) {
+    return;
+  }
 
   // Ensure authenticated as primary seller before writing to protected seller documents
   if (sellerId === PRIMARY_SELLER_UID && (!auth.currentUser || auth.currentUser.uid !== PRIMARY_SELLER_UID)) {
@@ -658,13 +682,13 @@ export async function saveCatalogToFirestore(
       const batch = writeBatch(db);
       batch.set(doc(db, 'sellers', sellerId, 'catalogs', catalog.id), payload);
       try {
-        await batch.commit();
+        await commitBatchWithTimeout(batch);
       } catch (commitErr: any) {
         if (commitErr?.code === 'permission-denied') {
           await ensureSellerAuthenticated();
           const retryBatch = writeBatch(db);
           retryBatch.set(doc(db, 'sellers', sellerId, 'catalogs', catalog.id), payload);
-          await retryBatch.commit();
+          await commitBatchWithTimeout(retryBatch);
         } else {
           throw commitErr;
         }
@@ -677,7 +701,7 @@ export async function saveCatalogToFirestore(
           if (!oldChunksSnap.empty) {
             const delBatch = writeBatch(db);
             oldChunksSnap.docs.forEach((d) => delBatch.delete(d.ref));
-            return delBatch.commit();
+            return commitBatchWithTimeout(delBatch);
           }
         })
         .catch(() => {});
@@ -717,9 +741,9 @@ export async function saveCatalogToFirestore(
 
     batch.set(doc(db, 'sellers', sellerId, 'catalogs', catalog.id), mainPayload);
 
-    // Commit all chunks and main document atomically in a SINGLE network call!
+    // Commit all chunks and main document atomically with strict timeout protection
     try {
-      await batch.commit();
+      await commitBatchWithTimeout(batch);
     } catch (commitErr: any) {
       if (commitErr?.code === 'permission-denied') {
         await ensureSellerAuthenticated();
@@ -735,7 +759,7 @@ export async function saveCatalogToFirestore(
           );
         });
         retryBatch.set(doc(db, 'sellers', sellerId, 'catalogs', catalog.id), mainPayload);
-        await retryBatch.commit();
+        await commitBatchWithTimeout(retryBatch);
       } else {
         throw commitErr;
       }
@@ -752,7 +776,7 @@ export async function saveCatalogToFirestore(
         if (toDelete.length > 0) {
           const delBatch = writeBatch(db);
           toDelete.forEach((d) => delBatch.delete(d.ref));
-          return delBatch.commit();
+          return commitBatchWithTimeout(delBatch);
         }
       })
       .catch(() => {});
@@ -821,29 +845,39 @@ export async function deleteCatalogFromFirestore(
 }
 
 // Subscribe to all Catalogs for a seller (transparently reassembles chunked high-res catalogs)
-// Subscribe to real-time catalog changes for a seller
+// Real-time synchronization powered by Upstash Redis and Firestore
 export function subscribeToSellerCatalogs(
   sellerId: string,
   onData: (catalogs: Catalog[]) => void,
   onError?: (err: any) => void
 ): Unsubscribe {
-  // Check Upstash Redis cache first for ultra-fast load and zero Firestore reads
-  try {
-    redisClient
-      .get<Catalog[] | string>(`catalog:${sellerId}`)
-      .then((cached) => {
-        if (cached) {
-          const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
-          if (Array.isArray(parsed) && parsed.length > 0) {
+  let isUnsubscribed = false;
+  let lastKnownFingerprint = '';
+
+  // 1. Ultra-fast Redis poll (runs immediately + every 3.5s) to bypass Firestore quota limits
+  const pollRedis = async () => {
+    if (isUnsubscribed) return;
+    try {
+      const cached = await redisClient.get<Catalog[] | string>(`catalog:${sellerId}`);
+      if (cached && !isUnsubscribed) {
+        const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const fingerprint = `${parsed.length}_${parsed.reduce((s, c) => s + (c.products?.length || 0), 0)}`;
+          if (fingerprint !== lastKnownFingerprint) {
+            lastKnownFingerprint = fingerprint;
             onData(parsed as Catalog[]);
           }
         }
-      })
-      .catch(() => {});
-  } catch {}
+      }
+    } catch {}
+  };
 
+  pollRedis();
+  const pollInterval = setInterval(pollRedis, 3500);
+
+  // 2. Firestore real-time snapshot listener
   const path = `sellers/${sellerId}/catalogs`;
-  return onSnapshot(
+  const unsubSnapshot = onSnapshot(
     collection(db, 'sellers', sellerId, 'catalogs'),
     async (snapshot) => {
       try {
@@ -909,14 +943,18 @@ export function subscribeToSellerCatalogs(
         catalogs.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
         
         // Cache to IndexedDB for offline instant load
-        if (catalogs.length > 0) {
+        if (catalogs.length > 0 && !isUnsubscribed) {
           setStoredItem(`cached_catalogs_${sellerId}`, catalogs).catch(() => {});
           setStoredItem('cached_catalogs_latest', catalogs).catch(() => {});
           // Update Upstash Redis cache
           redisClient.set(`catalog:${sellerId}`, JSON.stringify(catalogs), { ex: REDIS_CACHE_TTL }).catch(() => {});
         }
 
-        onData(catalogs);
+        if (!isUnsubscribed) {
+          const fingerprint = `${catalogs.length}_${catalogs.reduce((s, c) => s + (c.products?.length || 0), 0)}`;
+          lastKnownFingerprint = fingerprint;
+          onData(catalogs);
+        }
       } catch (err) {
         console.warn('Snapshot error in catalogs processing:', err);
         if (onError) onError(err);
@@ -927,6 +965,12 @@ export function subscribeToSellerCatalogs(
       if (onError) onError(err);
     }
   );
+
+  return () => {
+    isUnsubscribed = true;
+    clearInterval(pollInterval);
+    unsubSnapshot();
+  };
 }
 
 // Subscribe to Store Settings for a seller

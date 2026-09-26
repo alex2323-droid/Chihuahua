@@ -204,6 +204,16 @@ export default function App() {
   
   const sellerUid = sellerUser?.uid;
 
+  // Watchdog: Ensure syncing indicator never stays stuck under any condition
+  useEffect(() => {
+    if (isSyncing) {
+      const timer = setTimeout(() => {
+        setIsSyncing(false);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [isSyncing]);
+
   // Modals & Drawers state
   const [isExtractorOpen, setIsExtractorOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
