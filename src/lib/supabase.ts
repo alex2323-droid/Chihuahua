@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Catalog, StoreSettings } from '../types/catalog';
+import { rehydrateProduct } from './firestoreService';
 
 const DEFAULT_SUPABASE_URL = 'https://dihwmebijaxeulmrjmrh.supabase.co';
 const DEFAULT_SUPABASE_ANON_KEY =
@@ -103,7 +104,9 @@ export async function fetchCatalogsFromSupabase(sellerId: string): Promise<Catal
       description: d.description || '',
       createdAt: d.created_at,
       updatedAt: d.updated_at,
-      products: Array.isArray(d.products) ? d.products : [],
+      products: Array.isArray(d.products)
+        ? d.products.map(rehydrateProduct)
+        : [],
     }));
   } catch (err) {
     console.warn('Error fetching catalogs from Supabase:', err);
@@ -126,7 +129,7 @@ export async function saveCatalogsToSupabase(
       seller_id: sellerId,
       title: cat.title,
       description: cat.description || '',
-      products: cat.products || [],
+      products: (cat.products || []).map(rehydrateProduct),
       updated_at: new Date().toISOString(),
     }));
 

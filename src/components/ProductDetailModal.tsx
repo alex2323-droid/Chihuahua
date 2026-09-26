@@ -48,10 +48,29 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   // Compute all available gallery images
   const allImages = React.useMemo(() => {
     if (!product) return [];
-    if (product.images && product.images.length > 0) {
-      return product.images;
+    let list: string[] = [];
+    if (product.imageDetails && product.imageDetails.length > 0) {
+      list = product.imageDetails
+        .map((d) => d?.url || '')
+        .filter((u) => u && !u.startsWith('__SAME_AS') && !u.startsWith('__DET_'));
     }
-    return product.image ? [product.image] : [];
+    if (list.length === 0 && product.images && product.images.length > 0) {
+      list = product.images.filter(
+        (u) => u && !u.startsWith('__SAME_AS') && !u.startsWith('__DET_')
+      );
+    }
+    if (
+      list.length === 0 &&
+      product.image &&
+      !product.image.startsWith('__SAME_AS') &&
+      !product.image.startsWith('__DET_')
+    ) {
+      list = [product.image];
+    }
+    if (list.length === 0) {
+      list = [getCategoryFallbackImage(`${product.title} ${product.description}`)];
+    }
+    return list;
   }, [product]);
 
   // Compute available sizes list
@@ -94,7 +113,11 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   if (!isOpen || !product) return null;
 
-  const currentDisplayImage = allImages[activeImageIndex] || product.image;
+  const rawDisplay = allImages[activeImageIndex] || product.image;
+  const currentDisplayImage =
+    rawDisplay && !rawDisplay.startsWith('__SAME_AS') && !rawDisplay.startsWith('__DET_')
+      ? rawDisplay
+      : allImages[0];
   const isLogo = isLogoUrl(currentDisplayImage);
   const fallbackDisplay = getCategoryFallbackImage(`${product.title} ${product.description}`);
   const displayImage = isLogo ? fallbackDisplay : currentDisplayImage;

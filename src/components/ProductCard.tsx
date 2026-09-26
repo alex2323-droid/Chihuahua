@@ -41,10 +41,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const [copied, setCopied] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Compute clean display image (strictly rejecting store logos)
-  const isLogo = isLogoUrl(product.image);
-  const fallbackDisplay = getCategoryFallbackImage(`${product.title} ${product.description}`);
-  const initialImg = isLogo ? fallbackDisplay : product.image;
+  const resolveRealImage = (prod: Product): string => {
+    let raw = prod.image || '';
+    if (!raw || raw.startsWith('__SAME_AS') || raw.startsWith('__DET_')) {
+      raw =
+        prod.imageDetails?.[0]?.url ||
+        (Array.isArray(prod.images) ? prod.images[0] : '') ||
+        '';
+      if (raw.startsWith('__SAME_AS') || raw.startsWith('__DET_')) {
+        raw = '';
+      }
+    }
+    const isLogo = isLogoUrl(raw);
+    const fallbackDisplay = getCategoryFallbackImage(`${prod.title} ${prod.description}`);
+    return isLogo || !raw ? fallbackDisplay : raw;
+  };
+
+  const initialImg = resolveRealImage(product);
 
   const [imgSrc, setImgSrc] = useState(initialImg);
   const [imgError, setImgError] = useState(false);
@@ -52,20 +65,26 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   // Sync image state if product prop changes
   React.useEffect(() => {
-    const isCurrentLogo = isLogoUrl(product.image);
-    setImgSrc(isCurrentLogo ? fallbackDisplay : product.image);
+    const fresh = resolveRealImage(product);
+    setImgSrc(fresh);
     setImgError(false);
     setIsLoaded(false);
-  }, [product.image, product.title, product.description]);
+  }, [product.image, product.title, product.description, product.imageDetails, product.images]);
 
   const handleImageError = () => {
+    const fallback = getCategoryFallbackImage(`${product.title} ${product.description}`);
     // If direct image fails, attempt loading via proxy route before showing fallback
     if (
       imgSrc &&
       !imgSrc.includes('/api/proxy-image') &&
-      imgSrc.startsWith('http')
+      imgSrc.startsWith('http') &&
+      !window.location.hostname.includes('vercel.app')
     ) {
       setImgSrc(`/api/proxy-image?url=${encodeURIComponent(imgSrc)}`);
+    } else if (imgSrc !== fallback) {
+      setImgSrc(fallback);
+      setImgError(false);
+      setIsLoaded(true);
     } else {
       setImgError(true);
     }
