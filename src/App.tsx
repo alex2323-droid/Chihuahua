@@ -402,37 +402,22 @@ export default function App() {
     const unsubCatalogs = subscribeToSellerCatalogs(targetUid, (cloudCatalogs) => {
       setIsLoadingCatalogs(false);
       if (cloudCatalogs && cloudCatalogs.length > 0) {
+        const rehydrated = cloudCatalogs.map(rehydrateCatalog);
+        const cloudJson = JSON.stringify(rehydrated);
         isRemoteCatalogUpdateRef.current = true;
-        setCatalogs((prev) => {
-          const prevProductCount = prev.reduce((sum, c) => sum + (c.products?.length || 0), 0);
-          const cloudProductCount = cloudCatalogs.reduce((sum, c) => sum + (c.products?.length || 0), 0);
+        lastSavedCatalogsRef.current = cloudJson;
 
-          // If local has more products than cloud, or if user is seller, preserve local products
-          const hasLocalUnsynced = prevProductCount > cloudProductCount || isSeller || userRole === 'seller';
+        setCatalogs(rehydrated);
 
-          const targetCatalogs = (!hasLocalUnsynced && prevProductCount === 0)
-            ? cloudCatalogs
-            : mergeLocalAndCloudCatalogs(prev, cloudCatalogs);
+        try {
+          localStorage.setItem('catalogcraft_catalogs', cloudJson);
+        } catch {}
+        setStoredItem('cached_catalogs_latest', rehydrated).catch(() => {});
+        setStoredItem(`cached_catalogs_${targetUid}`, rehydrated).catch(() => {});
 
-          try {
-            localStorage.setItem('catalogcraft_catalogs', JSON.stringify(targetCatalogs));
-          } catch {}
-          setStoredItem('cached_catalogs_latest', targetCatalogs).catch(() => {});
-          setStoredItem(`cached_catalogs_${targetUid}`, targetCatalogs).catch(() => {});
-
-          // If local had unsynced products and we are the seller, trigger immediate cloud sync
-          if (hasLocalUnsynced && (isSeller || userRole === 'seller')) {
-            const finalCount = targetCatalogs.reduce((sum, c) => sum + (c.products?.length || 0), 0);
-            if (finalCount > cloudProductCount) {
-              dispatchImmediateCatalogSync(targetCatalogs);
-            }
-          }
-
-          return targetCatalogs;
-        });
         setActiveCatalogId((prev) => {
-          if (!prev || !cloudCatalogs.some((c) => c.id === prev)) {
-            return cloudCatalogs[0]?.id || 'cat_principal';
+          if (!prev || !rehydrated.some((c) => c.id === prev)) {
+            return rehydrated[0]?.id || 'cat_principal';
           }
           return prev;
         });
@@ -453,7 +438,16 @@ export default function App() {
       });
       unsubSupabase = subscribeToSupabaseCatalogs(targetUid, (supaCats) => {
         if (supaCats && supaCats.length > 0) {
-          setCatalogs((prev) => mergeLocalAndCloudCatalogs(prev, supaCats));
+          const rehydrated = supaCats.map(rehydrateCatalog);
+          const supaJson = JSON.stringify(rehydrated);
+          isRemoteCatalogUpdateRef.current = true;
+          lastSavedCatalogsRef.current = supaJson;
+          setCatalogs(rehydrated);
+          try {
+            localStorage.setItem('catalogcraft_catalogs', supaJson);
+          } catch {}
+          setStoredItem('cached_catalogs_latest', rehydrated).catch(() => {});
+          setStoredItem(`cached_catalogs_${targetUid}`, rehydrated).catch(() => {});
           setIsLoadingCatalogs(false);
         }
       });
