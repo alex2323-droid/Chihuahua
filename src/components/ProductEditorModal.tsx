@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Product, SizeVariant, ProductImageDetail } from '../types/catalog';
 import { generateProductSku, generateSubCode } from '../utils/codeUtils';
+import { uploadBase64ImageToSupabase } from '../lib/supabase';
 
 interface ProductEditorModalProps {
   product: Product | null;
@@ -324,57 +325,86 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title) return;
+    if (!formData.title || isSubmitting) return;
 
-    // Active size variants with custom prices
-    const activeVariants = useCustomVariantPrices
-      ? variantsList.filter((v) => v.size.trim().length > 0 && !isNaN(v.price))
-      : [];
+    setIsSubmitting(true);
+    try {
+      // Active size variants with custom prices
+      const activeVariants = useCustomVariantPrices
+        ? variantsList.filter((v) => v.size.trim().length > 0 && !isNaN(v.price))
+        : [];
 
-    const parsedSizes = activeVariants.length > 0
-      ? activeVariants.map((v) => v.size.trim())
-      : formData.sizes
-      ? formData.sizes
-          .split(',')
-          .map((s) => s.trim())
-          .filter((s) => s.length > 0)
-      : [];
+      const parsedSizes = activeVariants.length > 0
+        ? activeVariants.map((v) => v.size.trim())
+        : formData.sizes
+        ? formData.sizes
+            .split(',')
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0)
+        : [];
 
-    const basePrice = activeVariants.length > 0
-      ? Math.min(...activeVariants.map((v) => v.price))
-      : Number(formData.price) || 0;
+      const basePrice = activeVariants.length > 0
+        ? Math.min(...activeVariants.map((v) => v.price))
+        : Number(formData.price) || 0;
 
-    const finalImages = imageList.length > 0
-      ? imageList
-      : [formData.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80'];
+      const rawImages = imageList.length > 0
+        ? imageList
+        : [formData.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80'];
 
-    onSave({
-      id: formData.id || 'prod_' + Date.now(),
-      sku: formData.sku || generateProductSku(),
-      title: formData.title || 'Producto',
-      description: formData.description || '',
-      image: finalImages[0],
-      images: finalImages,
-      imageDetails: imageDetailsList.map((d) => ({
-        ...d,
-        code: (d.code && d.code.trim() !== '') ? d.code.trim().toUpperCase() : generateSubCode(),
-      })),
-      price: basePrice,
-      originalPrice: formData.originalPrice ? Number(formData.originalPrice) : null,
-      currency: formData.currency || '$',
-      category: formData.category || 'General',
-      brand: formData.brand || 'Mi Tienda',
-      sizes: formData.sizes || undefined,
-      availableSizes: parsedSizes.length > 0 ? parsedSizes : undefined,
-      sizeVariants: activeVariants.length > 0 ? activeVariants : undefined,
-      badge: formData.badge || '',
-      inStock: formData.inStock !== false,
-      sourceUrl: formData.sourceUrl,
-    });
+      // Automatically upload Base64 images directly to Supabase Storage CDN
+      const finalImages = await Promise.all(
+        rawImages.map((img) =>
+          img && img.startsWith('data:')
+            ? uploadBase64ImageToSupabase(img, 'prod')
+            : Promise.resolve(img)
+        )
+      );
 
-    onClose();
+      const finalImageDetails = await Promise.all(
+        imageDetailsList.map(async (d) => ({
+          ...d,
+          url:
+            d.url && d.url.startsWith('data:')
+              ? await uploadBase64ImageToSupabase(d.url, 'prod')
+              : d.url,
+          code:
+            d.code && d.code.trim() !== ''
+              ? d.code.trim().toUpperCase()
+              : generateSubCode(),
+        }))
+      );
+
+      onSave({
+        id: formData.id || 'prod_' + Date.now(),
+        sku: formData.sku || generateProductSku(),
+        title: formData.title || 'Producto',
+        description: formData.description || '',
+        image: finalImages[0],
+        images: finalImages,
+        imageDetails: finalImageDetails,
+        price: basePrice,
+        originalPrice: formData.originalPrice ? Number(formData.originalPrice) : null,
+        currency: formData.currency || '$',
+        category: formData.category || 'General',
+        brand: formData.brand || 'Mi Tienda',
+        sizes: formData.sizes || undefined,
+        availableSizes: parsedSizes.length > 0 ? parsedSizes : undefined,
+        sizeVariants: activeVariants.length > 0 ? activeVariants : undefined,
+        badge: formData.badge || '',
+        inStock: formData.inStock !== false,
+        sourceUrl: formData.sourceUrl,
+      });
+
+      onClose();
+    } catch (err) {
+      console.error('Error saving product images:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

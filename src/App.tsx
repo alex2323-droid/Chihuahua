@@ -31,6 +31,13 @@ import {
 } from './lib/firestoreService';
 import { User } from 'firebase/auth';
 import {
+  isSupabaseConfigured,
+  saveCatalogsToSupabase,
+  saveSettingsToSupabase,
+  fetchSettingsFromSupabase,
+  subscribeToSupabaseCatalogs,
+} from './lib/supabase';
+import {
   Sparkles,
   Plus,
   Search,
@@ -432,9 +439,26 @@ export default function App() {
       hasLoadedCatalogsFromCloud.current = true;
     });
 
+    // Supabase Dual-Sync: fetch/subscribe to Supabase PostgreSQL
+    let unsubSupabase = () => {};
+    if (isSupabaseConfigured) {
+      fetchSettingsFromSupabase(targetUid).then((supaSettings) => {
+        if (supaSettings) {
+          setSettings((prev) => ({ ...prev, ...supaSettings }));
+        }
+      });
+      unsubSupabase = subscribeToSupabaseCatalogs(targetUid, (supaCats) => {
+        if (supaCats && supaCats.length > 0) {
+          setCatalogs((prev) => mergeLocalAndCloudCatalogs(prev, supaCats));
+          setIsLoadingCatalogs(false);
+        }
+      });
+    }
+
     return () => {
       unsubSettings();
       unsubCatalogs();
+      unsubSupabase();
     };
   }, [activeViewingSellerUid, sellerUid, isSeller]);
 
@@ -463,6 +487,9 @@ export default function App() {
         lastSavedSettingsRef.current = settingsStr;
         setIsSyncing(true);
         try {
+          if (isSupabaseConfigured) {
+            saveSettingsToSupabase(sellerUid, settings).catch(() => {});
+          }
           await saveStoreSettingsToFirestore(sellerUid, settings);
         } catch (err) {
           console.error('Cloud settings save error:', err);
@@ -515,6 +542,9 @@ export default function App() {
         lastSavedCatalogsRef.current = catalogsStr;
         setIsSyncing(true);
         try {
+          if (isSupabaseConfigured) {
+            saveCatalogsToSupabase(sellerUid, catalogs).catch(() => {});
+          }
           await saveAllCatalogsToFirestore(sellerUid, catalogs, true);
         } catch (err) {
           console.warn('Cloud catalog save error (persisted locally):', err);
@@ -642,6 +672,9 @@ export default function App() {
 
     const targetUid = isSeller && sellerUid ? sellerUid : PRIMARY_STORE_UID;
     if (targetUid) {
+      if (isSupabaseConfigured) {
+        saveSettingsToSupabase(targetUid, nextSettings).catch(() => {});
+      }
       setIsSyncing(true);
       saveStoreSettingsToFirestore(targetUid, nextSettings)
         .then(() => {
@@ -660,6 +693,9 @@ export default function App() {
 
     const targetUid = isSeller && sellerUid ? sellerUid : PRIMARY_STORE_UID;
     if (targetUid && nextCatalogs.length > 0) {
+      if (isSupabaseConfigured) {
+        saveCatalogsToSupabase(targetUid, nextCatalogs).catch(() => {});
+      }
       setIsSyncing(true);
       saveAllCatalogsToFirestore(targetUid, nextCatalogs, true)
         .then(() => {

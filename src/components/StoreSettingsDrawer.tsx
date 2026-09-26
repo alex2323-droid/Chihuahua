@@ -11,10 +11,13 @@ import {
   Zap,
   CheckCircle2,
   AlertCircle,
+  Database,
+  ExternalLink,
 } from 'lucide-react';
 import { StoreSettings } from '../types/catalog';
 import { compressImageBase64 } from '../utils/imageUtils';
 import { redisClient } from '../lib/firestoreService';
+import { getSupabaseConfig, isSupabaseConfigured } from '../lib/supabase';
 
 interface StoreSettingsDrawerProps {
   settings: StoreSettings;
@@ -31,6 +34,27 @@ export const StoreSettingsDrawer: React.FC<StoreSettingsDrawerProps> = ({
 }) => {
   const [formData, setFormData] = useState<StoreSettings>({ ...settings });
   const [redisStatus, setRedisStatus] = useState<{ enabled: boolean; message: string } | null>(null);
+  
+  // Supabase Configuration State
+  const initialSupabase = getSupabaseConfig();
+  const [supabaseUrlInput, setSupabaseUrlInput] = useState(initialSupabase.url);
+  const [supabaseKeyInput, setSupabaseKeyInput] = useState(initialSupabase.key);
+  const [supabaseStatus, setSupabaseStatus] = useState<{ connected: boolean; message: string } | null>(null);
+  const [isSavingSupabase, setIsSavingSupabase] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      const cfg = getSupabaseConfig();
+      setSupabaseUrlInput(cfg.url);
+      setSupabaseKeyInput(cfg.key);
+      if (cfg.url && cfg.key) {
+        setSupabaseStatus({
+          connected: true,
+          message: 'Supabase PostgreSQL y Almacenamiento CDN configurados.',
+        });
+      }
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -267,6 +291,71 @@ export const StoreSettingsDrawer: React.FC<StoreSettingsDrawerProps> = ({
                     <Upload className="w-4 h-4" />
                     <input type="file" accept="image/*" onChange={handleCoverUpload} className="hidden" />
                   </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Supabase Configuration Section */}
+            <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Database className="w-4 h-4 text-emerald-600" />
+                  <span className="text-xs font-bold text-slate-800">Conexión Supabase (PostgreSQL & CDN)</span>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${supabaseStatus?.connected ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
+                  {supabaseStatus?.connected ? 'Conectado' : 'Opcional'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Conecta tu proyecto de Supabase para almacenar imágenes ilimitadas en CDN sin límites diarios de cuotas.
+              </p>
+              <div className="space-y-2">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Project URL</label>
+                  <input
+                    type="url"
+                    placeholder="https://xyzcompany.supabase.co"
+                    value={supabaseUrlInput}
+                    onChange={(e) => setSupabaseUrlInput(e.target.value)}
+                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Anon / Public API Key</label>
+                  <input
+                    type="password"
+                    placeholder="eyJhbGciOi..."
+                    value={supabaseKeyInput}
+                    onChange={(e) => setSupabaseKeyInput(e.target.value)}
+                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:border-emerald-500 font-mono text-[11px]"
+                  />
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[10px] text-slate-400">
+                    {supabaseStatus?.message}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const cleanUrl = supabaseUrlInput.trim();
+                      const cleanKey = supabaseKeyInput.trim();
+                      if (!cleanUrl || !cleanKey) {
+                        localStorage.removeItem('catalogcraft_supabase_url');
+                        localStorage.removeItem('catalogcraft_supabase_key');
+                        setSupabaseStatus({ connected: false, message: 'Credenciales borradas.' });
+                        return;
+                      }
+                      setIsSavingSupabase(true);
+                      localStorage.setItem('catalogcraft_supabase_url', cleanUrl);
+                      localStorage.setItem('catalogcraft_supabase_key', cleanKey);
+                      setSupabaseStatus({ connected: true, message: '¡Conectado! Recargando...' });
+                      setTimeout(() => window.location.reload(), 800);
+                    }}
+                    disabled={isSavingSupabase}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-lg transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                  >
+                    {isSavingSupabase ? 'Guardando...' : 'Guardar y Conectar'}
+                  </button>
                 </div>
               </div>
             </div>
