@@ -4,6 +4,7 @@ import path from 'path';
 import { GoogleGenAI, Type } from '@google/genai';
 import * as cheerio from 'cheerio';
 import dotenv from 'dotenv';
+import { Redis } from '@upstash/redis';
 
 dotenv.config();
 
@@ -12,6 +13,20 @@ const PORT = process.env.PORT || 3000;
 const isProd = process.env.NODE_ENV === 'production';
 
 app.use(express.json({ limit: '50mb' }));
+
+// Initialize Upstash Redis Client with user credentials
+const UPSTASH_URL =
+  process.env.UPSTASH_REDIS_REST_URL || 'https://touched-gnat-44365.upstash.io';
+const UPSTASH_TOKEN =
+  process.env.UPSTASH_REDIS_REST_TOKEN || 'Aa1NAAIgcDE4MTdlZGI2NGQwZDg0YWI5YjA5MmJmMjdjZDRmZmJiMQ';
+
+const redis =
+  UPSTASH_URL && UPSTASH_TOKEN
+    ? new Redis({
+        url: UPSTASH_URL,
+        token: UPSTASH_TOKEN,
+      })
+    : null;
 
 // Initialize Gemini Client
 const ai = new GoogleGenAI({
@@ -1062,6 +1077,75 @@ Genera un texto atractivo de 2 a 4 viñetas o frases vendedoras.`;
     res.json({
       enhancedDescription: `${req.body?.description || ''}\n\n✨ ¡Producto de alta calidad disponible en tienda!`,
     });
+  }
+});
+
+// UPSTASH REDIS CACHE ENDPOINTS
+app.get('/api/cache/status', (_req: Request, res: Response) => {
+  res.json({
+    enabled: !!redis,
+    message: redis
+      ? 'Upstash Redis está activo y reduciendo lecturas de Firestore.'
+      : 'Upstash Redis no configurado. Agrega UPSTASH_REDIS_REST_URL y UPSTASH_REDIS_REST_TOKEN en .env para activar el caché.',
+  });
+});
+
+app.get('/api/cache/catalog/:sellerId', async (req: Request, res: Response) => {
+  try {
+    const { sellerId } = req.params;
+    if (!redis) {
+      res.json({ hit: false, reason: 'redis_not_configured' });
+      return;
+    }
+
+    const cacheKey = `catalog:${sellerId}`;
+    const cachedData = await redis.get(cacheKey);
+
+    if (cachedData) {
+      const parsed = typeof cachedData === 'string' ? JSON.parse(cachedData) : cachedData;
+      res.json({ hit: true, catalogs: parsed });
+      return;
+    }
+
+    res.json({ hit: false });
+  } catch (err: any) {
+    res.json({ hit: false, error: err.message });
+  }
+});
+
+app.post('/api/cache/catalog/:sellerId', async (req: Request, res: Response) => {
+  try {
+    const { sellerId } = req.params;
+    const { catalogs, ttlSeconds } = req.body;
+
+    if (!redis) {
+      res.json({ success: false, reason: 'redis_not_configured' });
+      return;
+    }
+
+    const cacheKey = `catalog:${sellerId}`;
+    const ttl = ttlSeconds && typeof ttlSeconds === 'number' ? ttlSeconds : 86400; // 24 hours default TTL
+
+    await redis.set(cacheKey, JSON.stringify(catalogs), { ex: ttl });
+    res.json({ success: true, cached: true });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.delete('/api/cache/catalog/:sellerId', async (req: Request, res: Response) => {
+  try {
+    const { sellerId } = req.params;
+    if (!redis) {
+      res.json({ success: false, reason: 'redis_not_configured' });
+      return;
+    }
+
+    const cacheKey = `catalog:${sellerId}`;
+    await redis.del(cacheKey);
+    res.json({ success: true, invalidated: true });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 

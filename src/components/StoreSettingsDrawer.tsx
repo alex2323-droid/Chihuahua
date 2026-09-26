@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Settings,
   Store,
@@ -8,6 +8,9 @@ import {
   Image as ImageIcon,
   X,
   Upload,
+  Zap,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 import { StoreSettings } from '../types/catalog';
 import { compressImageBase64 } from '../utils/imageUtils';
@@ -26,6 +29,16 @@ export const StoreSettingsDrawer: React.FC<StoreSettingsDrawerProps> = ({
   onSave,
 }) => {
   const [formData, setFormData] = useState<StoreSettings>({ ...settings });
+  const [redisStatus, setRedisStatus] = useState<{ enabled: boolean; message: string } | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetch('/api/cache/status')
+        .then((res) => res.json())
+        .then((data) => setRedisStatus(data))
+        .catch(() => setRedisStatus({ enabled: false, message: 'No se pudo conectar con el servicio de caché.' }));
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -246,6 +259,25 @@ export const StoreSettingsDrawer: React.FC<StoreSettingsDrawerProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Upstash Redis Cache Status Banner */}
+            {redisStatus && (
+              <div
+                className={`p-3.5 rounded-2xl border text-xs flex items-start gap-2.5 ${
+                  redisStatus.enabled
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                    : 'bg-amber-50 border-amber-200 text-amber-900'
+                }`}
+              >
+                <Zap className={`w-4 h-4 shrink-0 mt-0.5 ${redisStatus.enabled ? 'text-emerald-600' : 'text-amber-600'}`} />
+                <div>
+                  <span className="font-bold block mb-0.5">
+                    {redisStatus.enabled ? 'Aceleración de Caché Upstash Redis Activa' : 'Caché Upstash Redis Inactivo'}
+                  </span>
+                  <p className="text-[11px] leading-relaxed opacity-90">{redisStatus.message}</p>
+                </div>
+              </div>
+            )}
 
           </form>
 

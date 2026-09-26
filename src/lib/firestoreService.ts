@@ -20,6 +20,23 @@ import {
 import { db, auth } from './firebase';
 import { StoreSettings, Catalog, Product } from '../types/catalog';
 import { getStoredItem, setStoredItem } from './indexedDbStorage';
+import { Redis } from '@upstash/redis';
+
+// Upstash Redis Client Configuration
+const UPSTASH_URL =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_UPSTASH_REDIS_REST_URL) ||
+  'https://touched-gnat-44365.upstash.io';
+const UPSTASH_TOKEN =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_UPSTASH_REDIS_REST_TOKEN) ||
+  'Aa1NAAIgcDE4MTdlZGI2NGQwZDg0YWI5YjA5MmJmMjdjZDRmZmJiMQ';
+
+export const redisClient = new Redis({
+  url: UPSTASH_URL,
+  token: UPSTASH_TOKEN,
+});
+
+// Cache TTL constant (24 hours = 86,400 seconds)
+const REDIS_CACHE_TTL = 86400;
 
 // In-memory cache for chunked catalogs to avoid redundant network reads and reduce Firestore quota usage
 const chunkedCatalogCache = new Map<string, { updatedAt: string; products: any[] }>();
@@ -311,7 +328,7 @@ function optimizeImagesForFirestore<T>(data: T): T {
   return data;
 }
 
-// Save Store Settings to Firestore under seller account
+// Save Store Settings to Firestore under seller account and update Redis cache
 export async function saveStoreSettingsToFirestore(
   sellerId: string,
   settings: StoreSettings
@@ -319,6 +336,11 @@ export async function saveStoreSettingsToFirestore(
   const path = `sellers/${sellerId}/settings/current`;
   setStoredItem(`cached_settings_${sellerId}`, settings).catch(() => {});
   setStoredItem('cached_settings_latest', settings).catch(() => {});
+
+  // Update Redis cache immediately
+  try {
+    redisClient.set(`settings:${sellerId}`, JSON.stringify(settings), { ex: REDIS_CACHE_TTL }).catch(() => {});
+  } catch {}
 
   try {
     const optimized = optimizeImagesForFirestore(settings);
@@ -332,13 +354,30 @@ export async function saveStoreSettingsToFirestore(
   }
 }
 
-// Load Store Settings from Firestore
+// Load Store Settings from Redis cache first, falling back to Firestore
 export async function loadStoreSettingsFromFirestore(sellerId: string): Promise<StoreSettings | null> {
+  // 1. Try reading from Upstash Redis first (0 Firestore reads)
+  try {
+    const cachedSettings = await redisClient.get<StoreSettings | string>(`settings:${sellerId}`);
+    if (cachedSettings) {
+      const parsed = typeof cachedSettings === 'string' ? JSON.parse(cachedSettings) : cachedSettings;
+      if (parsed && typeof parsed === 'object') {
+        return parsed as StoreSettings;
+      }
+    }
+  } catch (redisErr) {
+    console.warn('Upstash Redis read error for settings, falling back to Firestore:', redisErr);
+  }
+
+  // 2. Cache miss -> Fetch from Firestore and populate Redis
   const path = `sellers/${sellerId}/settings/current`;
   try {
     const snap = await getDoc(doc(db, 'sellers', sellerId, 'settings', 'current'));
     if (snap.exists()) {
-      return snap.data() as StoreSettings;
+      const data = snap.data() as StoreSettings;
+      // Populate Redis cache asynchronously
+      redisClient.set(`settings:${sellerId}`, JSON.stringify(data), { ex: REDIS_CACHE_TTL }).catch(() => {});
+      return data;
     }
     return null;
   } catch (err) {
@@ -607,6 +646,11 @@ export async function saveAllCatalogsToFirestore(
   for (const cat of catalogs) {
     await saveCatalogToFirestore(sellerId, cat, force);
   }
+
+  // Update Upstash Redis cache directly with 24h TTL
+  try {
+    redisClient.set(`catalog:${sellerId}`, JSON.stringify(catalogs), { ex: REDIS_CACHE_TTL }).catch(() => {});
+  } catch {}
 }
 
 // Force immediate full cloud synchronization
@@ -636,6 +680,9 @@ export async function deleteCatalogFromFirestore(
     } catch {}
 
     await deleteDoc(doc(db, 'sellers', sellerId, 'catalogs', catalogId));
+
+    // Invalidate Redis cache
+    redisClient.del(`catalog:${sellerId}`).catch(() => {});
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, path);
   }
@@ -648,6 +695,21 @@ export function subscribeToSellerCatalogs(
   onData: (catalogs: Catalog[]) => void,
   onError?: (err: any) => void
 ): Unsubscribe {
+  // Check Upstash Redis cache first for ultra-fast load and zero Firestore reads
+  try {
+    redisClient
+      .get<Catalog[] | string>(`catalog:${sellerId}`)
+      .then((cached) => {
+        if (cached) {
+          const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            onData(parsed as Catalog[]);
+          }
+        }
+      })
+      .catch(() => {});
+  } catch {}
+
   const path = `sellers/${sellerId}/catalogs`;
   return onSnapshot(
     collection(db, 'sellers', sellerId, 'catalogs'),
@@ -718,6 +780,8 @@ export function subscribeToSellerCatalogs(
         if (catalogs.length > 0) {
           setStoredItem(`cached_catalogs_${sellerId}`, catalogs).catch(() => {});
           setStoredItem('cached_catalogs_latest', catalogs).catch(() => {});
+          // Update Upstash Redis cache
+          redisClient.set(`catalog:${sellerId}`, JSON.stringify(catalogs), { ex: REDIS_CACHE_TTL }).catch(() => {});
         }
 
         onData(catalogs);
