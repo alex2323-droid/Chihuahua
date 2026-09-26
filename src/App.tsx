@@ -88,6 +88,20 @@ const addDeletedProductId = (id: string) => {
   } catch {}
 };
 
+// Helper to get newest timestamp from catalog list
+const getCatalogTimestamp = (cats: Catalog[]): number => {
+  if (!cats || cats.length === 0) return 0;
+  let maxTime = 0;
+  for (const c of cats) {
+    const timeStr = c.updatedAt || c.createdAt;
+    if (timeStr) {
+      const time = new Date(timeStr).getTime();
+      if (!isNaN(time) && time > maxTime) maxTime = time;
+    }
+  }
+  return maxTime;
+};
+
 // Helper to safely merge local state with cloud state so all products remain synchronized across all devices
 const mergeLocalAndCloudCatalogs = (localCats: Catalog[], cloudCats: Catalog[]): Catalog[] => {
   const safeCloud = (cloudCats || []).map(rehydrateCatalog);
@@ -251,7 +265,7 @@ export default function App() {
   const [layoutMode, setLayoutMode] = useState<'grid-3' | 'grid-2' | 'grid-4' | 'list'>('grid-3');
   const [copiedShareLink, setCopiedShareLink] = useState(false);
 
-  // 0. Ultra-fast initial hydration from IndexedDB for instant 0ms product loading
+  // 0. Ultra-fast initial hydration from IndexedDB for instant 0ms product loading if local storage was empty
   useEffect(() => {
     let isMounted = true;
     getStoredItem<Catalog[]>('cached_catalogs_latest').then((cached) => {
@@ -259,9 +273,8 @@ export default function App() {
       if (cached && Array.isArray(cached) && cached.length > 0) {
         setCatalogs((prev) => {
           const currentCount = prev.reduce((acc, c) => acc + (c.products?.length || 0), 0);
-          const cachedCount = cached.reduce((acc, c) => acc + (c.products?.length || 0), 0);
-          if (currentCount === 0 || cachedCount >= currentCount) {
-            return cached;
+          if (currentCount === 0) {
+            return cached.map(rehydrateCatalog);
           }
           return prev;
         });
@@ -398,16 +411,25 @@ export default function App() {
       hasLoadedSettingsFromCloud.current = true;
     });
 
-    // Subscribe to cloud catalogs
-    const unsubCatalogs = subscribeToSellerCatalogs(targetUid, (cloudCatalogs) => {
-      setIsLoadingCatalogs(false);
-      if (cloudCatalogs && cloudCatalogs.length > 0) {
-        const rehydrated = cloudCatalogs.map(rehydrateCatalog);
+    // Unified handler for incoming cloud catalogs from Firestore or Supabase
+    const applyIncomingCatalogs = (incoming: Catalog[]) => {
+      if (!incoming || incoming.length === 0) return;
+      const rehydrated = incoming.map(rehydrateCatalog);
+
+      setCatalogs((prev) => {
+        const prevTime = getCatalogTimestamp(prev);
+        const incTime = getCatalogTimestamp(rehydrated);
+
+        // If local state has a newer timestamp than incoming cloud update, ignore older update
+        if (prevTime > 0 && incTime > 0 && incTime < prevTime) {
+          return prev;
+        }
+
         const cloudJson = JSON.stringify(rehydrated);
+        if (JSON.stringify(prev) === cloudJson) return prev;
+
         isRemoteCatalogUpdateRef.current = true;
         lastSavedCatalogsRef.current = cloudJson;
-
-        setCatalogs(rehydrated);
 
         try {
           localStorage.setItem('catalogcraft_catalogs', cloudJson);
@@ -415,13 +437,24 @@ export default function App() {
         setStoredItem('cached_catalogs_latest', rehydrated).catch(() => {});
         setStoredItem(`cached_catalogs_${targetUid}`, rehydrated).catch(() => {});
 
-        setActiveCatalogId((prev) => {
-          if (!prev || !rehydrated.some((c) => c.id === prev)) {
-            return rehydrated[0]?.id || 'cat_principal';
-          }
-          return prev;
-        });
+        return rehydrated;
+      });
+
+      setActiveCatalogId((prev) => {
+        if (!prev || !rehydrated.some((c) => c.id === prev)) {
+          return rehydrated[0]?.id || 'cat_principal';
+        }
+        return prev;
+      });
+      setIsLoadingCatalogs(false);
+    };
+
+    // Subscribe to cloud catalogs
+    const unsubCatalogs = subscribeToSellerCatalogs(targetUid, (cloudCatalogs) => {
+      if (cloudCatalogs && cloudCatalogs.length > 0) {
+        applyIncomingCatalogs(cloudCatalogs);
       }
+      setIsLoadingCatalogs(false);
       hasLoadedCatalogsFromCloud.current = true;
     }, () => {
       setIsLoadingCatalogs(false);
@@ -438,17 +471,7 @@ export default function App() {
       });
       unsubSupabase = subscribeToSupabaseCatalogs(targetUid, (supaCats) => {
         if (supaCats && supaCats.length > 0) {
-          const rehydrated = supaCats.map(rehydrateCatalog);
-          const supaJson = JSON.stringify(rehydrated);
-          isRemoteCatalogUpdateRef.current = true;
-          lastSavedCatalogsRef.current = supaJson;
-          setCatalogs(rehydrated);
-          try {
-            localStorage.setItem('catalogcraft_catalogs', supaJson);
-          } catch {}
-          setStoredItem('cached_catalogs_latest', rehydrated).catch(() => {});
-          setStoredItem(`cached_catalogs_${targetUid}`, rehydrated).catch(() => {});
-          setIsLoadingCatalogs(false);
+          applyIncomingCatalogs(supaCats);
         }
       });
     }
@@ -684,20 +707,27 @@ export default function App() {
   };
 
   const dispatchImmediateCatalogSync = (nextCatalogs: Catalog[]) => {
+    const nowIso = new Date().toISOString();
+    const stampedCatalogs = nextCatalogs.map((c) => ({
+      ...c,
+      updatedAt: nowIso,
+    }));
+
+    const jsonStr = JSON.stringify(stampedCatalogs);
     try {
-      localStorage.setItem('catalogcraft_catalogs', JSON.stringify(nextCatalogs));
+      localStorage.setItem('catalogcraft_catalogs', jsonStr);
     } catch {}
-    setStoredItem('cached_catalogs_latest', nextCatalogs).catch(() => {});
+    setStoredItem('cached_catalogs_latest', stampedCatalogs).catch(() => {});
 
     const targetUid = isSeller && sellerUid ? sellerUid : PRIMARY_STORE_UID;
-    if (targetUid && nextCatalogs.length > 0) {
+    if (targetUid && stampedCatalogs.length > 0) {
       if (isSupabaseConfigured) {
-        saveCatalogsToSupabase(targetUid, nextCatalogs).catch(() => {});
+        saveCatalogsToSupabase(targetUid, stampedCatalogs).catch(() => {});
       }
       setIsSyncing(true);
-      saveAllCatalogsToFirestore(targetUid, nextCatalogs, true)
+      saveAllCatalogsToFirestore(targetUid, stampedCatalogs, true)
         .then(() => {
-          lastSavedCatalogsRef.current = JSON.stringify(nextCatalogs);
+          lastSavedCatalogsRef.current = jsonStr;
         })
         .catch((e) => console.warn('Background catalog sync warning:', e))
         .finally(() => setIsSyncing(false));

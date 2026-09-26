@@ -51,6 +51,7 @@ export interface Catalog {
   description: string;
   products: Product[];
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface CartItem {
