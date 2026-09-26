@@ -540,6 +540,9 @@ export async function saveCatalogToFirestore(
   const deDuplicated = deDuplicateCatalog(catalog);
   const cleaned = sanitizeForFirestore(deDuplicated);
 
+  // Clear in-memory chunk cache so snapshot subscribers receive new products instantly
+  chunkedCatalogCache.delete(catalog.id);
+
   // Always cache locally in IndexedDB first
   setStoredItem(`cached_catalogs_${sellerId}`, [cleaned]).catch(() => {});
   setStoredItem('cached_catalogs_latest', [cleaned]).catch(() => {});

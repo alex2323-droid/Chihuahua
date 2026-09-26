@@ -214,7 +214,7 @@ export default function App() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   // Role calculation
-  const isSeller = userRole === 'seller' && currentSellerName === 'Chihuahua';
+  const isSeller = Boolean(sellerUid && (userRole === 'seller' || sellerUser));
   const effectiveCustomerMode = !isSeller || isCustomerMode;
 
   // Filters & Search
@@ -371,13 +371,13 @@ export default function App() {
       if (cloudCatalogs && cloudCatalogs.length > 0) {
         isRemoteCatalogUpdateRef.current = true;
         setCatalogs((prev) => {
-          const merged = mergeLocalAndCloudCatalogs(prev, cloudCatalogs);
+          const targetCatalogs = !isSeller ? cloudCatalogs : mergeLocalAndCloudCatalogs(prev, cloudCatalogs);
           try {
-            localStorage.setItem('catalogcraft_catalogs', JSON.stringify(merged));
+            localStorage.setItem('catalogcraft_catalogs', JSON.stringify(targetCatalogs));
           } catch {}
-          setStoredItem('cached_catalogs_latest', merged).catch(() => {});
-          setStoredItem(`cached_catalogs_${targetUid}`, merged).catch(() => {});
-          return merged;
+          setStoredItem('cached_catalogs_latest', targetCatalogs).catch(() => {});
+          setStoredItem(`cached_catalogs_${targetUid}`, targetCatalogs).catch(() => {});
+          return targetCatalogs;
         });
         setActiveCatalogId((prev) => {
           if (!prev || !cloudCatalogs.some((c) => c.id === prev)) {
@@ -469,18 +469,18 @@ export default function App() {
         clearTimeout(saveCatalogTimeoutRef.current);
       }
 
-      // Debounce auto-save by 2000ms to consolidate user edits and protect write quota
+      // Fast auto-save (300ms) to sync changes to Cloud Firestore and Upstash Redis instantly
       saveCatalogTimeoutRef.current = setTimeout(async () => {
         lastSavedCatalogsRef.current = catalogsStr;
         setIsSyncing(true);
         try {
-          await saveAllCatalogsToFirestore(sellerUid, catalogs);
+          await saveAllCatalogsToFirestore(sellerUid, catalogs, true);
         } catch (err) {
           console.warn('Cloud catalog save error (persisted locally):', err);
         } finally {
           setIsSyncing(false);
         }
-      }, 2000);
+      }, 300);
     }
 
     return () => {
