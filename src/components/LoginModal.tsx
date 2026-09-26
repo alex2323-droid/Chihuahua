@@ -54,11 +54,11 @@ export function LoginModal({
         // Log in
         if (cleanUser.toLowerCase() === 'chihuahua') {
           // Seller check
-          if (cleanUser !== 'Chihuahua' || cleanPass !== '1306') {
+          if (cleanUser.toLowerCase() !== 'chihuahua' || cleanPass !== '1306') {
             throw new Error('Contraseña o usuario de Vendedor incorrecto.');
           }
-          const res = await loginSeller(cleanUser, cleanPass);
-          onLoginSuccess(res.username, 'seller');
+          const res = await loginSeller('Chihuahua', cleanPass);
+          onLoginSuccess('Chihuahua', 'seller');
         } else {
           // Customer login
           const res = await signInCustomer(cleanUser, cleanPass);

@@ -330,6 +330,13 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = subscribeToAuth((user) => {
       setSellerUser(user);
+      if (!user) {
+        const savedRole = localStorage.getItem('catalogcraft_user_role');
+        const savedName = localStorage.getItem('catalogcraft_username');
+        if (savedRole === 'seller' && savedName?.toLowerCase() === 'chihuahua') {
+          loginSeller('Chihuahua', '1306').catch(() => {});
+        }
+      }
     });
 
     return () => unsubscribe();
@@ -377,15 +384,29 @@ export default function App() {
         isRemoteCatalogUpdateRef.current = true;
         setCatalogs((prev) => {
           const prevProductCount = prev.reduce((sum, c) => sum + (c.products?.length || 0), 0);
-          // If customer, or if initial local state had 0 products, take cloud catalogs directly!
-          const targetCatalogs = (!isSeller || prevProductCount === 0)
+          const cloudProductCount = cloudCatalogs.reduce((sum, c) => sum + (c.products?.length || 0), 0);
+
+          // If local has more products than cloud, or if user is seller, preserve local products
+          const hasLocalUnsynced = prevProductCount > cloudProductCount || isSeller || userRole === 'seller';
+
+          const targetCatalogs = (!hasLocalUnsynced && prevProductCount === 0)
             ? cloudCatalogs
             : mergeLocalAndCloudCatalogs(prev, cloudCatalogs);
+
           try {
             localStorage.setItem('catalogcraft_catalogs', JSON.stringify(targetCatalogs));
           } catch {}
           setStoredItem('cached_catalogs_latest', targetCatalogs).catch(() => {});
           setStoredItem(`cached_catalogs_${targetUid}`, targetCatalogs).catch(() => {});
+
+          // If local had unsynced products and we are the seller, trigger immediate cloud sync
+          if (hasLocalUnsynced && (isSeller || userRole === 'seller')) {
+            const finalCount = targetCatalogs.reduce((sum, c) => sum + (c.products?.length || 0), 0);
+            if (finalCount > cloudProductCount) {
+              dispatchImmediateCatalogSync(targetCatalogs);
+            }
+          }
+
           return targetCatalogs;
         });
         setActiveCatalogId((prev) => {
