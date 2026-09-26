@@ -66,7 +66,10 @@ import {
   RefreshCw,
   ChevronDown,
   Loader2,
+  Lock,
 } from 'lucide-react';
+import { LegalModals, LegalTab } from './components/LegalModals';
+import { CookieConsentBanner } from './components/CookieConsentBanner';
 
 // Deleted product ID tracking helpers
 const getDeletedProductIds = (): Set<string> => {
@@ -247,6 +250,16 @@ export default function App() {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [selectedDetailProduct, setSelectedDetailProduct] = useState<Product | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  // Legal, Privacy, Cookie Compliance State
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState<LegalTab>('privacy');
+  const [isCookiePreferencesOpen, setIsCookiePreferencesOpen] = useState(false);
+
+  const handleOpenLegal = (tab: LegalTab = 'privacy') => {
+    setLegalModalTab(tab);
+    setIsLegalModalOpen(true);
+  };
 
   // Primary Store Owner UID (Chihuahua)
   const PRIMARY_STORE_UID = 'bdy3TcO5IAOpmkQEy8zLGpEkENG3';
@@ -1592,14 +1605,82 @@ export default function App() {
 
       </main>
 
-      {/* Footer */}
-      <footer className="mt-auto bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500 no-print">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="font-medium text-slate-600">
-            © {new Date().getFullYear()} {settings.storeName} (Cuenta: {currentSellerName || 'General'})
-          </p>
-          <div className="text-slate-500">
-            <span>WhatsApp: {settings.whatsappNumber}</span>
+      {/* Footer with Legal Compliance, Transparency & Business Info */}
+      <footer className="mt-auto bg-white border-t border-slate-200 pt-8 pb-12 text-xs text-slate-500 no-print">
+        <div className="max-w-7xl mx-auto px-4 space-y-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 pb-6 border-b border-slate-100">
+            {/* Store & Legal Identity */}
+            <div className="flex flex-col items-center md:items-start gap-1 text-center md:text-left">
+              <div className="flex items-center gap-2">
+                <span className="font-display font-bold text-slate-900 text-sm">
+                  {settings.storeName}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-md border border-emerald-200">
+                  <ShieldCheck className="w-3 h-3" /> Verificado
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Catálogo Digital Interactivo • Pedidos directos vía WhatsApp ({settings.whatsappNumber})
+              </p>
+            </div>
+
+            {/* Legal & Compliance Quick Links */}
+            <nav aria-label="Enlaces legales y políticas" className="flex flex-wrap justify-center items-center gap-x-5 gap-y-2 text-xs font-semibold text-slate-600">
+              <button
+                onClick={() => handleOpenLegal('terms')}
+                className="hover:text-emerald-700 transition-colors focus:outline-none focus:underline"
+              >
+                Términos y Condiciones
+              </button>
+              <button
+                onClick={() => handleOpenLegal('privacy')}
+                className="hover:text-emerald-700 transition-colors focus:outline-none focus:underline"
+              >
+                Política de Privacidad
+              </button>
+              <button
+                onClick={() => handleOpenLegal('cookies')}
+                className="hover:text-emerald-700 transition-colors focus:outline-none focus:underline"
+              >
+                Cookies
+              </button>
+              <button
+                onClick={() => handleOpenLegal('refunds')}
+                className="hover:text-emerald-700 transition-colors focus:outline-none focus:underline"
+              >
+                Garantía y Reembolsos
+              </button>
+              <button
+                onClick={() => handleOpenLegal('business')}
+                className="hover:text-emerald-700 transition-colors focus:outline-none focus:underline"
+              >
+                Datos del Negocio
+              </button>
+            </nav>
+          </div>
+
+          {/* Bottom Bar with Trust Badges and Copyright */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-400">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
+              <span>© {new Date().getFullYear()} {settings.storeName}. Todos los derechos reservados.</span>
+              <span className="hidden sm:inline">•</span>
+              <span className="flex items-center gap-1 text-slate-500">
+                <Lock className="w-3 h-3 text-emerald-600" /> Cifrado y Comercio Seguro
+              </span>
+              <span className="hidden sm:inline">•</span>
+              <span className="text-slate-500">
+                Accesibilidad WCAG 2.1 AA
+              </span>
+            </div>
+
+            <div>
+              <button
+                onClick={() => setIsCookiePreferencesOpen(true)}
+                className="text-slate-500 hover:text-slate-800 underline font-medium"
+              >
+                Preferencias de Cookies
+              </button>
+            </div>
           </div>
         </div>
       </footer>
@@ -1662,6 +1743,7 @@ export default function App() {
         onClearCart={() => setCart([])}
         clientProfile={clientProfile}
         onUpdateClientProfile={handleUpdateClientProfile}
+        onOpenLegal={(tab) => handleOpenLegal(tab)}
       />
 
       <ProductDetailModal
@@ -1671,6 +1753,25 @@ export default function App() {
         onClose={() => setIsDetailOpen(false)}
         onAddToCart={handleAddToCart}
         isCustomerMode={effectiveCustomerMode}
+      />
+
+      {/* Legal & Privacy Center Modal */}
+      <LegalModals
+        isOpen={isLegalModalOpen}
+        initialTab={legalModalTab}
+        onClose={() => setIsLegalModalOpen(false)}
+        settings={settings}
+        onOpenCookiePreferences={() => {
+          setIsLegalModalOpen(false);
+          setIsCookiePreferencesOpen(true);
+        }}
+      />
+
+      {/* Cookie Consent Banner & Preferences Modal */}
+      <CookieConsentBanner
+        onOpenLegal={(tab) => handleOpenLegal(tab)}
+        isOpenPreferencesExternal={isCookiePreferencesOpen}
+        onClosePreferencesExternal={() => setIsCookiePreferencesOpen(false)}
       />
 
       {/* Hidden Printable Catalog Component */}

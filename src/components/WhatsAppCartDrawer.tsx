@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ShoppingBag,
   Trash2,
@@ -8,8 +8,11 @@ import {
   X,
   MessageCircle,
   Megaphone,
+  ShieldCheck,
+  Lock,
 } from 'lucide-react';
 import { CartItem, StoreSettings } from '../types/catalog';
+import { calculateCartTotal, getWhatsAppOrderUrl } from '../utils/cartUtils';
 
 interface WhatsAppCartDrawerProps {
   cart: CartItem[];
@@ -21,6 +24,7 @@ interface WhatsAppCartDrawerProps {
   onClearCart: () => void;
   clientProfile?: any;
   onUpdateClientProfile?: (profile: { username: string; address: string }) => void;
+  onOpenLegal?: (tab: 'terms' | 'privacy' | 'refunds') => void;
 }
 
 export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
@@ -33,9 +37,11 @@ export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
   onClearCart,
   clientProfile = null,
   onUpdateClientProfile,
+  onOpenLegal,
 }) => {
   const [customerName, setCustomerName] = useState('');
   const [notes, setNotes] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(true);
 
   React.useEffect(() => {
     if (clientProfile) {
@@ -43,6 +49,17 @@ export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
       setNotes(clientProfile.address || '');
     }
   }, [clientProfile]);
+
+  // Handle ESC key to close
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -60,12 +77,7 @@ export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
     }
   };
 
-  const totalAmount = cart.reduce((sum, item) => {
-    const itemPrice = item.unitPrice ?? item.product.price;
-    return sum + itemPrice * item.quantity;
-  }, 0);
-
-  const cleanPhone = settings.whatsappNumber.replace(/[^0-9]/g, '');
+  const totalAmount = calculateCartTotal(cart);
 
   const getItemKey = (item: CartItem) => {
     let key = item.product.id;
@@ -76,36 +88,17 @@ export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
 
   const handleSendWhatsApp = () => {
     if (cart.length === 0) return;
+    if (!acceptedTerms) {
+      alert('Por favor acepta los Términos y la Política de Privacidad para continuar.');
+      return;
+    }
 
-    let message = `👋 Hola *${settings.storeName}*, me gustaría realizar el siguiente pedido:\n\n📋 *PRODUCTOS SELECCIONADOS:*\n`;
-
-    cart.forEach((item, index) => {
-      const itemPrice = item.unitPrice ?? item.product.price;
-      const skuText = item.product.sku ? ` [Cód: ${item.product.sku}]` : '';
-      const sizeText = item.selectedSize ? ` 📏 (Talla: *${item.selectedSize}*)` : '';
-      const codeText = item.selectedImageCode ? ` 📸 [Sub-Cód: *${item.selectedImageCode}*]` : '';
-      message += `${index + 1}. *${item.product.title}*${skuText}${sizeText}${codeText}\n   Cantidad: ${item.quantity}x | Precio: ${
-        item.product.currency
-      }${(itemPrice * item.quantity).toFixed(2)}\n`;
+    const whatsappUrl = getWhatsAppOrderUrl({
+      cart,
+      settings,
+      customerName,
+      notes,
     });
-
-    message += `\n💰 *TOTAL A PAGAR: ${settings.currencySymbol}${totalAmount.toFixed(
-      2
-    )}*\n`;
-
-    if (customerName.trim()) {
-      message += `\n👤 *Nombre del Cliente:* ${customerName.trim()}`;
-    }
-
-    if (notes.trim()) {
-      message += `\n📝 *Notas/Dirección de Entrega:* ${notes.trim()}`;
-    }
-
-    message += `\n\n¡Quedo a la espera de su confirmación!`;
-
-    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(
-      message
-    )}`;
     window.open(whatsappUrl, '_blank');
   };
 
@@ -253,6 +246,43 @@ export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
                     className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs outline-none focus:border-emerald-500"
                   />
                 </div>
+
+                {/* Legal Consent & Data Minimization ("Solo datos necesarios") */}
+                <div className="pt-2 border-t border-slate-100 space-y-2">
+                  <div className="flex items-start gap-1.5 text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-200/70">
+                    <Lock className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>
+                      <strong>Privacidad garantizada:</strong> Solo solicitamos datos indispensables para el envío y no compartimos tu información.
+                    </span>
+                  </div>
+
+                  <label className="flex items-start gap-2 cursor-pointer text-[11px] text-slate-600 select-none">
+                    <input
+                      type="checkbox"
+                      checked={acceptedTerms}
+                      onChange={(e) => setAcceptedTerms(e.target.checked)}
+                      className="mt-0.5 w-3.5 h-3.5 accent-emerald-600 rounded cursor-pointer shrink-0"
+                    />
+                    <span>
+                      He leído y acepto los{' '}
+                      <button
+                        type="button"
+                        onClick={() => onOpenLegal && onOpenLegal('terms')}
+                        className="font-bold text-emerald-700 underline hover:text-emerald-900"
+                      >
+                        Términos
+                      </button>{' '}
+                      y la{' '}
+                      <button
+                        type="button"
+                        onClick={() => onOpenLegal && onOpenLegal('privacy')}
+                        className="font-bold text-emerald-700 underline hover:text-emerald-900"
+                      >
+                        Política de Privacidad
+                      </button>.
+                    </span>
+                  </label>
+                </div>
               </div>
             </div>
           )}
@@ -271,7 +301,12 @@ export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
 
             <button
               onClick={handleSendWhatsApp}
-              className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2"
+              disabled={!acceptedTerms}
+              className={`w-full py-3 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                acceptedTerms
+                  ? 'bg-emerald-600 hover:bg-emerald-700 cursor-pointer'
+                  : 'bg-slate-300 cursor-not-allowed text-slate-500'
+              }`}
             >
               <MessageCircle className="w-4 h-4 fill-white" />
               <span>Enviar Pedido por WhatsApp</span>

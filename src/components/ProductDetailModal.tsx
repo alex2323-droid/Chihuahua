@@ -95,6 +95,17 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     }
   }, [product, sizesList]);
 
+  // Handle ESC key to close modal for WCAG accessibility
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   // Active selected size variant custom price
   const activeVariant = React.useMemo(() => {
     if (!product || !product.sizeVariants || !selectedSize) return null;
