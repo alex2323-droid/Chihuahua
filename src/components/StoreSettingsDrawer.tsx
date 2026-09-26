@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { StoreSettings } from '../types/catalog';
 import { compressImageBase64 } from '../utils/imageUtils';
+import { redisClient } from '../lib/firestoreService';
 
 interface StoreSettingsDrawerProps {
   settings: StoreSettings;
@@ -33,10 +34,20 @@ export const StoreSettingsDrawer: React.FC<StoreSettingsDrawerProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      fetch('/api/cache/status')
-        .then((res) => res.json())
-        .then((data) => setRedisStatus(data))
-        .catch(() => setRedisStatus({ enabled: false, message: 'No se pudo conectar con el servicio de caché.' }));
+      redisClient
+        .ping()
+        .then(() => {
+          setRedisStatus({
+            enabled: true,
+            message: 'Upstash Redis está activo y reduciendo lecturas de Firestore.',
+          });
+        })
+        .catch(() => {
+          setRedisStatus({
+            enabled: false,
+            message: 'No se pudo conectar directamente con Upstash Redis.',
+          });
+        });
     }
   }, [isOpen]);
 
