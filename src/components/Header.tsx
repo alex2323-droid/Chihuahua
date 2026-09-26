@@ -56,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({
   isSyncing,
   userRole = 'seller',
 }) => {
-  const isActualSeller = userRole === 'seller' && currentSellerName === 'Chihuahua';
+  const isActualSeller = userRole === 'seller' && currentSellerName?.toLowerCase() === 'chihuahua';
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs no-print">

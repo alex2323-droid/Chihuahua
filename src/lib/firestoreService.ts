@@ -23,20 +23,96 @@ import { getStoredItem, setStoredItem } from './indexedDbStorage';
 import { Redis } from '@upstash/redis';
 
 // Upstash Redis Client Configuration
-const UPSTASH_URL =
+export const UPSTASH_REDIS_REST_URL =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_UPSTASH_REDIS_REST_URL) ||
+  (typeof process !== 'undefined' && process.env?.UPSTASH_REDIS_REST_URL) ||
   'https://touched-gnat-44365.upstash.io';
-const UPSTASH_TOKEN =
+export const UPSTASH_REDIS_REST_TOKEN =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_UPSTASH_REDIS_REST_TOKEN) ||
+  (typeof process !== 'undefined' && process.env?.UPSTASH_REDIS_REST_TOKEN) ||
   'Aa1NAAIgcDE4MTdlZGI2NGQwZDg0YWI5YjA5MmJmMjdjZDRmZmJiMQ';
 
 export const redisClient = new Redis({
-  url: UPSTASH_URL,
-  token: UPSTASH_TOKEN,
+  url: UPSTASH_REDIS_REST_URL,
+  token: UPSTASH_REDIS_REST_TOKEN,
 });
 
 // Cache TTL constant (24 hours = 86,400 seconds)
-const REDIS_CACHE_TTL = 86400;
+export const REDIS_CACHE_TTL = 86400;
+
+/**
+ * Middleware para cachear consultas de Firestore en Upstash Redis vía HTTP REST.
+ * 1. Intenta leer primero de Redis usando fetch(UPSTASH_REDIS_REST_URL + '/get/' + key).
+ * 2. Si no existe o falla, ejecuta la promesa de Firestore.
+ * 3. Guarda el resultado en Redis usando fetch(UPSTASH_REDIS_REST_URL + '/setex/' + key + '/' + ttl + '/' + value).
+ */
+export async function fetchWithCache<T>(
+  key: string,
+  firestorePromise: Promise<T> | (() => Promise<T>),
+  ttl: number = REDIS_CACHE_TTL
+): Promise<T> {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${UPSTASH_REDIS_REST_TOKEN}`,
+  };
+
+  // 1. Intentar obtener el dato de Redis usando fetch(UPSTASH_REDIS_REST_URL + '/get/' + key)
+  try {
+    const getUrl = `${UPSTASH_REDIS_REST_URL}/get/${encodeURIComponent(key)}`;
+    const res = await fetch(getUrl, {
+      method: 'GET',
+      headers,
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.result !== null && data.result !== undefined) {
+        try {
+          const parsed = typeof data.result === 'string' ? JSON.parse(data.result) : data.result;
+          return parsed as T;
+        } catch {
+          return data.result as T;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`[Upstash Redis Cache Miss/Error for "${key}"]`, err);
+  }
+
+  // 2. Si no existe o falla, ejecutar la promesa de Firestore
+  const result: T =
+    typeof firestorePromise === 'function' ? await firestorePromise() : await firestorePromise;
+
+  // 3. Guardar el resultado en Redis usando fetch(UPSTASH_REDIS_REST_URL + '/setex/' + key + '/' + ttl + '/' + value)
+  if (result !== null && result !== undefined) {
+    try {
+      const value = typeof result === 'string' ? result : JSON.stringify(result);
+      const encodedKey = encodeURIComponent(key);
+      const encodedValue = encodeURIComponent(value);
+      const setexUrl = `${UPSTASH_REDIS_REST_URL}/setex/${encodedKey}/${ttl}/${encodedValue}`;
+
+      const setRes = await fetch(setexUrl, {
+        method: 'GET',
+        headers,
+      });
+
+      // Fallback en caso de que el payload exceda el tamaño máximo de una URL (HTTP 414 URI Too Long)
+      if (!setRes.ok && (setRes.status === 414 || setRes.status >= 400)) {
+        await fetch(`${UPSTASH_REDIS_REST_URL}/set/${encodedKey}?ex=${ttl}`, {
+          method: 'POST',
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(value),
+        }).catch(() => {});
+      }
+    } catch (saveErr) {
+      console.warn(`[Upstash Redis Cache Save Error for "${key}"]`, saveErr);
+    }
+  }
+
+  return result;
+}
 
 // In-memory cache for chunked catalogs to avoid redundant network reads and reduce Firestore quota usage
 const chunkedCatalogCache = new Map<string, { updatedAt: string; products: any[] }>();
@@ -354,36 +430,25 @@ export async function saveStoreSettingsToFirestore(
   }
 }
 
-// Load Store Settings from Redis cache first, falling back to Firestore
+// Load Store Settings using fetchWithCache middleware (Redis first, fallback to Firestore)
 export async function loadStoreSettingsFromFirestore(sellerId: string): Promise<StoreSettings | null> {
-  // 1. Try reading from Upstash Redis first (0 Firestore reads)
-  try {
-    const cachedSettings = await redisClient.get<StoreSettings | string>(`settings:${sellerId}`);
-    if (cachedSettings) {
-      const parsed = typeof cachedSettings === 'string' ? JSON.parse(cachedSettings) : cachedSettings;
-      if (parsed && typeof parsed === 'object') {
-        return parsed as StoreSettings;
-      }
-    }
-  } catch (redisErr) {
-    console.warn('Upstash Redis read error for settings, falling back to Firestore:', redisErr);
-  }
-
-  // 2. Cache miss -> Fetch from Firestore and populate Redis
   const path = `sellers/${sellerId}/settings/current`;
-  try {
-    const snap = await getDoc(doc(db, 'sellers', sellerId, 'settings', 'current'));
-    if (snap.exists()) {
-      const data = snap.data() as StoreSettings;
-      // Populate Redis cache asynchronously
-      redisClient.set(`settings:${sellerId}`, JSON.stringify(data), { ex: REDIS_CACHE_TTL }).catch(() => {});
-      return data;
-    }
-    return null;
-  } catch (err) {
-    handleFirestoreError(err, OperationType.GET, path);
-    return null;
-  }
+  return fetchWithCache<StoreSettings | null>(
+    `settings:${sellerId}`,
+    async () => {
+      try {
+        const snap = await getDoc(doc(db, 'sellers', sellerId, 'settings', 'current'));
+        if (snap.exists()) {
+          return snap.data() as StoreSettings;
+        }
+        return null;
+      } catch (err) {
+        handleFirestoreError(err, OperationType.GET, path);
+        return null;
+      }
+    },
+    REDIS_CACHE_TTL
+  );
 }
 
 // De-duplicates image base64 strings inside a Product to drastically reduce payload size before saving to Firestore.
@@ -985,19 +1050,25 @@ export async function saveCustomerProfileToFirestore(
   }
 }
 
-// Load Customer Profile
+// Load Customer Profile using fetchWithCache middleware
 export async function loadCustomerProfileFromFirestore(customerId: string): Promise<CustomerProfile | null> {
   const path = `customers/${customerId}`;
-  try {
-    const snap = await getDoc(doc(db, 'customers', customerId));
-    if (snap.exists()) {
-      return snap.data() as CustomerProfile;
-    }
-    return null;
-  } catch (err) {
-    handleFirestoreError(err, OperationType.GET, path);
-    return null;
-  }
+  return fetchWithCache<CustomerProfile | null>(
+    `customer:${customerId}`,
+    async () => {
+      try {
+        const snap = await getDoc(doc(db, 'customers', customerId));
+        if (snap.exists()) {
+          return snap.data() as CustomerProfile;
+        }
+        return null;
+      } catch (err) {
+        handleFirestoreError(err, OperationType.GET, path);
+        return null;
+      }
+    },
+    3600 // 1 hour TTL
+  );
 }
 
 // Get all active sellers/stores in the system so customers can browse catalogs

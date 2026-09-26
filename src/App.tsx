@@ -213,8 +213,15 @@ export default function App() {
   const [selectedDetailProduct, setSelectedDetailProduct] = useState<Product | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  // Role calculation
-  const isSeller = Boolean(sellerUid && (userRole === 'seller' || sellerUser));
+  // Primary Store Owner UID (Chihuahua)
+  const PRIMARY_STORE_UID = 'bdy3TcO5IAOpmkQEy8zLGpEkENG3';
+
+  // Role calculation: ONLY Chihuahua is the seller!
+  const isSeller = Boolean(
+    sellerUid &&
+    userRole === 'seller' &&
+    (currentSellerName?.toLowerCase() === 'chihuahua' || sellerUid === PRIMARY_STORE_UID)
+  );
   const effectiveCustomerMode = !isSeller || isCustomerMode;
 
   // Filters & Search
@@ -330,7 +337,7 @@ export default function App() {
 
   // Update activeViewingSellerUid when seller logs in
   useEffect(() => {
-    if (sellerUid && userRole === 'seller' && currentSellerName === 'Chihuahua') {
+    if (sellerUid && userRole === 'seller' && (currentSellerName?.toLowerCase() === 'chihuahua' || sellerUid === PRIMARY_STORE_UID)) {
       setActiveViewingSellerUid(sellerUid);
       localStorage.setItem('catalogcraft_viewing_seller_uid', sellerUid);
     }
@@ -340,9 +347,7 @@ export default function App() {
   useEffect(() => {
     // When logged in as Chihuahua (the seller), bind to Chihuahua's account
     // When customer or visitor, always bind to Chihuahua / primary store account
-    const targetUid = isSeller && sellerUid
-      ? sellerUid
-      : (activeViewingSellerUid || 'bdy3TcO5IAOpmkQEy8zLGpEkENG3');
+    const targetUid = isSeller && sellerUid ? sellerUid : PRIMARY_STORE_UID;
 
     if (!targetUid) return;
 
@@ -371,7 +376,11 @@ export default function App() {
       if (cloudCatalogs && cloudCatalogs.length > 0) {
         isRemoteCatalogUpdateRef.current = true;
         setCatalogs((prev) => {
-          const targetCatalogs = !isSeller ? cloudCatalogs : mergeLocalAndCloudCatalogs(prev, cloudCatalogs);
+          const prevProductCount = prev.reduce((sum, c) => sum + (c.products?.length || 0), 0);
+          // If customer, or if initial local state had 0 products, take cloud catalogs directly!
+          const targetCatalogs = (!isSeller || prevProductCount === 0)
+            ? cloudCatalogs
+            : mergeLocalAndCloudCatalogs(prev, cloudCatalogs);
           try {
             localStorage.setItem('catalogcraft_catalogs', JSON.stringify(targetCatalogs));
           } catch {}
@@ -389,6 +398,7 @@ export default function App() {
       hasLoadedCatalogsFromCloud.current = true;
     }, () => {
       setIsLoadingCatalogs(false);
+      hasLoadedCatalogsFromCloud.current = true;
     });
 
     return () => {
@@ -461,15 +471,15 @@ export default function App() {
       return;
     }
 
-    // Safeguard: Auto-save to Firestore whenever the seller has catalogs in memory
-    if (isSeller && sellerUid && catalogs.length > 0) {
+    // Safeguard: Auto-save to Firestore ONLY after cloud catalogs have loaded and we are the verified seller
+    if (isSeller && sellerUid && hasLoadedCatalogsFromCloud.current && catalogs.length > 0) {
       if (lastSavedCatalogsRef.current === catalogsStr) return;
 
       if (saveCatalogTimeoutRef.current) {
         clearTimeout(saveCatalogTimeoutRef.current);
       }
 
-      // Fast auto-save (300ms) to sync changes to Cloud Firestore and Upstash Redis instantly
+      // Fast auto-save (400ms) to sync changes to Cloud Firestore and Upstash Redis instantly
       saveCatalogTimeoutRef.current = setTimeout(async () => {
         lastSavedCatalogsRef.current = catalogsStr;
         setIsSyncing(true);
@@ -480,7 +490,7 @@ export default function App() {
         } finally {
           setIsSyncing(false);
         }
-      }, 300);
+      }, 400);
     }
 
     return () => {
@@ -599,7 +609,7 @@ export default function App() {
     } catch {}
     setStoredItem('cached_settings_latest', nextSettings).catch(() => {});
 
-    const targetUid = isSeller && sellerUid ? sellerUid : (activeViewingSellerUid || 'bdy3TcO5IAOpmkQEy8zLGpEkENG3');
+    const targetUid = isSeller && sellerUid ? sellerUid : PRIMARY_STORE_UID;
     if (targetUid) {
       setIsSyncing(true);
       saveStoreSettingsToFirestore(targetUid, nextSettings)
@@ -617,7 +627,7 @@ export default function App() {
     } catch {}
     setStoredItem('cached_catalogs_latest', nextCatalogs).catch(() => {});
 
-    const targetUid = isSeller && sellerUid ? sellerUid : (activeViewingSellerUid || 'bdy3TcO5IAOpmkQEy8zLGpEkENG3');
+    const targetUid = isSeller && sellerUid ? sellerUid : PRIMARY_STORE_UID;
     if (targetUid && nextCatalogs.length > 0) {
       setIsSyncing(true);
       saveAllCatalogsToFirestore(targetUid, nextCatalogs, true)
@@ -630,7 +640,7 @@ export default function App() {
   };
 
   const handleForceSyncToCloud = async () => {
-    const targetUid = isSeller && sellerUid ? sellerUid : 'bdy3TcO5IAOpmkQEy8zLGpEkENG3';
+    const targetUid = isSeller && sellerUid ? sellerUid : PRIMARY_STORE_UID;
     setIsSyncing(true);
     try {
       await syncCatalogNowToFirestore(targetUid, catalogs);
@@ -904,12 +914,12 @@ export default function App() {
     await logoutSeller();
     setSellerUser(null);
     setCurrentSellerName(null);
-    setUserRole('seller');
+    setUserRole(null);
     localStorage.removeItem('catalogcraft_user_role');
     localStorage.removeItem('catalogcraft_username');
-    setIsCustomerMode(false);
-    setActiveViewingSellerUid('');
-    localStorage.removeItem('catalogcraft_viewing_seller_uid');
+    setIsCustomerMode(true);
+    setActiveViewingSellerUid(PRIMARY_STORE_UID);
+    localStorage.setItem('catalogcraft_viewing_seller_uid', PRIMARY_STORE_UID);
   };
 
   const handleLoginSuccess = (username: string, role: 'seller' | 'customer') => {
@@ -917,6 +927,8 @@ export default function App() {
     setUserRole(role);
     localStorage.setItem('catalogcraft_username', username);
     localStorage.setItem('catalogcraft_user_role', role);
+    setActiveViewingSellerUid(PRIMARY_STORE_UID);
+    localStorage.setItem('catalogcraft_viewing_seller_uid', PRIMARY_STORE_UID);
     if (role === 'customer') {
       setIsCustomerMode(true);
     } else {
