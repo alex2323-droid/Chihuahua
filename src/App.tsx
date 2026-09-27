@@ -18,12 +18,6 @@ import {
   loginSeller,
   logoutSeller,
   subscribeToAuth,
-  saveStoreSettingsToFirestore,
-  saveCatalogToFirestore,
-  saveAllCatalogsToFirestore,
-  syncCatalogNowToFirestore,
-  subscribeToSellerCatalogs,
-  subscribeToStoreSettings,
   loginCustomer,
   saveCustomerProfileToFirestore,
   loadCustomerProfileFromFirestore,
@@ -37,10 +31,12 @@ import {
 import { User } from 'firebase/auth';
 import {
   isSupabaseConfigured,
-  saveCatalogsToSupabase,
-  saveSettingsToSupabase,
-  fetchSettingsFromSupabase,
-  subscribeToSupabaseCatalogs,
+  saveCatalogsToCloud,
+  fetchCatalogsFromCloud,
+  subscribeToCatalogs,
+  saveSettingsToCloud,
+  fetchSettingsFromCloud,
+  subscribeToSettings,
 } from './lib/supabase';
 import {
   Sparkles,
@@ -400,7 +396,7 @@ export default function App() {
     }
   }, [sellerUid, userRole, currentSellerName]);
 
-  // 2. Real-time Firestore synchronization
+  // 2. Real-time Cloud Synchronization (Supabase PostgreSQL + Upstash Redis)
   useEffect(() => {
     // When logged in as Chihuahua (the seller), bind to Chihuahua's account
     // When customer or visitor, always bind to Chihuahua / primary store account
@@ -412,8 +408,8 @@ export default function App() {
     hasLoadedSettingsFromCloud.current = false;
     hasLoadedCatalogsFromCloud.current = false;
 
-    // Subscribe to cloud store settings
-    const unsubSettings = subscribeToStoreSettings(targetUid, (cloudSettings) => {
+    // Subscribe to cloud store settings via Supabase & Upstash Redis
+    const unsubSettings = subscribeToSettings(targetUid, (cloudSettings) => {
       if (cloudSettings) {
         const cloudStr = JSON.stringify(cloudSettings);
         isRemoteSettingsUpdateRef.current = true;
@@ -427,7 +423,7 @@ export default function App() {
       hasLoadedSettingsFromCloud.current = true;
     });
 
-    // Unified handler for incoming cloud catalogs from Firestore or Supabase
+    // Unified handler for incoming cloud catalogs from Supabase or Redis
     const applyIncomingCatalogs = (incoming: Catalog[]) => {
       if (!incoming || incoming.length === 0) return;
       const reconciled = reconcileCatalogs(catalogs, incoming, getDeletedProductIds());
@@ -455,43 +451,25 @@ export default function App() {
         return prev;
       });
       setIsLoadingCatalogs(false);
+      hasLoadedCatalogsFromCloud.current = true;
     };
 
-    // Subscribe to cloud catalogs
-    const unsubCatalogs = subscribeToSellerCatalogs(targetUid, (cloudCatalogs) => {
+    // Subscribe to cloud catalogs via Supabase & Upstash Redis
+    const unsubCatalogs = subscribeToCatalogs(targetUid, (cloudCatalogs) => {
       if (cloudCatalogs && cloudCatalogs.length > 0) {
         applyIncomingCatalogs(cloudCatalogs);
       }
       setIsLoadingCatalogs(false);
       hasLoadedCatalogsFromCloud.current = true;
-    }, () => {
-      setIsLoadingCatalogs(false);
-      hasLoadedCatalogsFromCloud.current = true;
     });
-
-    // Supabase Dual-Sync: fetch/subscribe to Supabase PostgreSQL
-    let unsubSupabase = () => {};
-    if (isSupabaseConfigured) {
-      fetchSettingsFromSupabase(targetUid).then((supaSettings) => {
-        if (supaSettings) {
-          setSettings((prev) => ({ ...prev, ...supaSettings }));
-        }
-      });
-      unsubSupabase = subscribeToSupabaseCatalogs(targetUid, (supaCats) => {
-        if (supaCats && supaCats.length > 0) {
-          applyIncomingCatalogs(supaCats);
-        }
-      });
-    }
 
     return () => {
       unsubSettings();
       unsubCatalogs();
-      unsubSupabase();
     };
   }, [activeViewingSellerUid, sellerUid, isSeller]);
 
-  // 3. Auto-save all changes to Firestore on state modification with debouncing
+  // 3. Auto-save all changes to Supabase & Redis on state modification with debouncing
   useEffect(() => {
     const settingsStr = JSON.stringify(settings);
     localStorage.setItem('catalogcraft_settings', settingsStr);
@@ -516,16 +494,13 @@ export default function App() {
         lastSavedSettingsRef.current = settingsStr;
         setIsSyncing(true);
         try {
-          if (isSupabaseConfigured) {
-            saveSettingsToSupabase(sellerUid, settings).catch(() => {});
-          }
-          await saveStoreSettingsToFirestore(sellerUid, settings);
+          await saveSettingsToCloud(sellerUid, settings);
         } catch (err) {
           console.error('Cloud settings save error:', err);
         } finally {
           setIsSyncing(false);
         }
-      }, 1000);
+      }, 500);
     }
 
     return () => {
@@ -540,7 +515,7 @@ export default function App() {
     try {
       localStorage.setItem('catalogcraft_catalogs', catalogsStr);
     } catch {
-      // LocalStorage is limited to 5MB, high-res catalogs are safely persisted in Cloud Firestore & IndexedDB
+      // LocalStorage is limited to 5MB, high-res catalogs are safely persisted in Supabase & IndexedDB
     }
 
     // Always persist full high-res catalogs in IndexedDB for 0ms startup
@@ -558,7 +533,7 @@ export default function App() {
       return;
     }
 
-    // Safeguard: Auto-save to Firestore ONLY after cloud catalogs have loaded and we are the verified seller
+    // Safeguard: Auto-save to Supabase & Redis ONLY after cloud catalogs have loaded and we are the verified seller
     if (isSeller && sellerUid && hasLoadedCatalogsFromCloud.current && catalogs.length > 0) {
       if (lastSavedCatalogsRef.current === catalogsStr) return;
 
@@ -566,21 +541,18 @@ export default function App() {
         clearTimeout(saveCatalogTimeoutRef.current);
       }
 
-      // Fast auto-save (400ms) to sync changes to Cloud Firestore and Upstash Redis instantly
+      // Fast auto-save (200ms) to sync changes to Supabase PostgreSQL and Upstash Redis instantly
       saveCatalogTimeoutRef.current = setTimeout(async () => {
         lastSavedCatalogsRef.current = catalogsStr;
         setIsSyncing(true);
         try {
-          if (isSupabaseConfigured) {
-            saveCatalogsToSupabase(sellerUid, catalogs).catch(() => {});
-          }
-          await saveAllCatalogsToFirestore(sellerUid, catalogs, true);
+          await saveCatalogsToCloud(sellerUid, catalogs);
         } catch (err) {
           console.warn('Cloud catalog save error (persisted locally):', err);
         } finally {
           setIsSyncing(false);
         }
-      }, 400);
+      }, 200);
     }
 
     return () => {
@@ -701,11 +673,8 @@ export default function App() {
 
     const targetUid = isSeller && sellerUid ? sellerUid : PRIMARY_STORE_UID;
     if (targetUid) {
-      if (isSupabaseConfigured) {
-        saveSettingsToSupabase(targetUid, nextSettings).catch(() => {});
-      }
       setIsSyncing(true);
-      saveStoreSettingsToFirestore(targetUid, nextSettings)
+      saveSettingsToCloud(targetUid, nextSettings)
         .then(() => {
           lastSavedSettingsRef.current = JSON.stringify(nextSettings);
         })
@@ -729,11 +698,8 @@ export default function App() {
 
     const targetUid = isSeller && sellerUid ? sellerUid : PRIMARY_STORE_UID;
     if (targetUid && stampedCatalogs.length > 0) {
-      if (isSupabaseConfigured) {
-        saveCatalogsToSupabase(targetUid, stampedCatalogs).catch(() => {});
-      }
       setIsSyncing(true);
-      saveAllCatalogsToFirestore(targetUid, stampedCatalogs, true)
+      saveCatalogsToCloud(targetUid, stampedCatalogs)
         .then(() => {
           lastSavedCatalogsRef.current = jsonStr;
         })
@@ -746,13 +712,10 @@ export default function App() {
     const targetUid = isSeller && sellerUid ? sellerUid : PRIMARY_STORE_UID;
     setIsSyncing(true);
     try {
-      if (isSupabaseConfigured) {
-        await saveCatalogsToSupabase(targetUid, catalogs);
-      }
-      await syncCatalogNowToFirestore(targetUid, catalogs);
-      await saveStoreSettingsToFirestore(targetUid, settings);
-      setSyncToastMessage('¡Catálogo sincronizado exitosamente con la nube en todos los dispositivos!');
-      setTimeout(() => setSyncToastMessage(null), 4000);
+      await saveCatalogsToCloud(targetUid, catalogs);
+      await saveSettingsToCloud(targetUid, settings);
+      setSyncToastMessage('¡Catálogo sincronizado exitosamente en la nube (Supabase + Redis)!');
+      setTimeout(() => setSyncToastMessage(null), 3000);
     } catch (err: any) {
       setSyncToastMessage('Guardado en almacenamiento local y Redis.');
       setTimeout(() => setSyncToastMessage(null), 3000);
