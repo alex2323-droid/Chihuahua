@@ -674,12 +674,16 @@ export default function App() {
     const targetUid = isSeller && sellerUid ? sellerUid : PRIMARY_STORE_UID;
     if (targetUid) {
       setIsSyncing(true);
+      const safetyTimer = setTimeout(() => setIsSyncing(false), 2500);
       saveSettingsToCloud(targetUid, nextSettings)
         .then(() => {
           lastSavedSettingsRef.current = JSON.stringify(nextSettings);
         })
         .catch((e) => console.warn('Background settings sync warning:', e))
-        .finally(() => setIsSyncing(false));
+        .finally(() => {
+          clearTimeout(safetyTimer);
+          setIsSyncing(false);
+        });
     }
   };
 
@@ -699,12 +703,16 @@ export default function App() {
     const targetUid = isSeller && sellerUid ? sellerUid : PRIMARY_STORE_UID;
     if (targetUid && stampedCatalogs.length > 0) {
       setIsSyncing(true);
+      const safetyTimer = setTimeout(() => setIsSyncing(false), 2500);
       saveCatalogsToCloud(targetUid, stampedCatalogs)
         .then(() => {
           lastSavedCatalogsRef.current = jsonStr;
         })
         .catch((e) => console.warn('Background catalog sync warning:', e))
-        .finally(() => setIsSyncing(false));
+        .finally(() => {
+          clearTimeout(safetyTimer);
+          setIsSyncing(false);
+        });
     }
   };
 
@@ -1692,6 +1700,8 @@ export default function App() {
         onSave={(newSettings) => {
           setSettings(newSettings);
           dispatchImmediateSettingsSync(newSettings);
+          setSyncToastMessage('¡Ajustes de tienda guardados exitosamente!');
+          setTimeout(() => setSyncToastMessage(null), 3000);
         }}
       />
 

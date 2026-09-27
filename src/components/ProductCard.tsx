@@ -77,8 +77,7 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
     if (
       imgSrc &&
       !imgSrc.includes('/api/proxy-image') &&
-      imgSrc.startsWith('http') &&
-      !window.location.hostname.includes('vercel.app')
+      imgSrc.startsWith('http')
     ) {
       setImgSrc(`/api/proxy-image?url=${encodeURIComponent(imgSrc)}`);
     } else if (imgSrc !== fallback) {

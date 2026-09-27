@@ -1,10 +1,13 @@
 import express, { Request, Response } from 'express';
-import { createServer as createViteServer } from 'vite';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { GoogleGenAI, Type } from '@google/genai';
 import * as cheerio from 'cheerio';
 import dotenv from 'dotenv';
 import { Redis } from '@upstash/redis';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -1278,6 +1281,7 @@ app.delete('/api/cache/catalog/:sellerId', async (req: Request, res: Response) =
 // Start Express + Vite dev middleware or static serving
 async function startServer() {
   if (!isProd) {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
@@ -1296,4 +1300,9 @@ async function startServer() {
   });
 }
 
-startServer();
+// Only launch standalone HTTP server when not inside a serverless environment (e.g. Vercel)
+if (!process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  startServer();
+}
+
+export default app;

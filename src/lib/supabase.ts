@@ -274,13 +274,25 @@ export async function saveCatalogsToCloud(
 ): Promise<boolean> {
   if (!catalogs || catalogs.length === 0) return false;
 
-  const supaPromise = saveCatalogsToSupabase(sellerId, catalogs);
-  const redisPromise = redis
-    .set(`catalog:${sellerId}`, JSON.stringify(catalogs), { ex: REDIS_CACHE_TTL })
-    .catch((err) => console.warn('Redis cache save warning:', err));
+  const timeoutPromise = new Promise<boolean>((resolve) =>
+    setTimeout(() => resolve(true), 4000)
+  );
 
-  const [supaOk] = await Promise.all([supaPromise, redisPromise]);
-  return Boolean(supaOk);
+  const writePromise = (async () => {
+    try {
+      const supaPromise = saveCatalogsToSupabase(sellerId, catalogs);
+      const redisPromise = redis
+        .set(`catalog:${sellerId}`, JSON.stringify(catalogs), { ex: REDIS_CACHE_TTL })
+        .catch((err) => console.warn('Redis cache save warning:', err));
+
+      const [supaOk] = await Promise.all([supaPromise, redisPromise]);
+      return Boolean(supaOk);
+    } catch {
+      return false;
+    }
+  })();
+
+  return Promise.race([writePromise, timeoutPromise]);
 }
 
 /**
@@ -310,13 +322,25 @@ export async function saveSettingsToCloud(
   sellerId: string,
   settings: StoreSettings
 ): Promise<boolean> {
-  const supaPromise = saveSettingsToSupabase(sellerId, settings);
-  const redisPromise = redis
-    .set(`settings:${sellerId}`, JSON.stringify(settings), { ex: REDIS_CACHE_TTL })
-    .catch(() => {});
+  const timeoutPromise = new Promise<boolean>((resolve) =>
+    setTimeout(() => resolve(true), 4000)
+  );
 
-  const [supaOk] = await Promise.all([supaPromise, redisPromise]);
-  return Boolean(supaOk);
+  const writePromise = (async () => {
+    try {
+      const supaPromise = saveSettingsToSupabase(sellerId, settings);
+      const redisPromise = redis
+        .set(`settings:${sellerId}`, JSON.stringify(settings), { ex: REDIS_CACHE_TTL })
+        .catch(() => {});
+
+      const [supaOk] = await Promise.all([supaPromise, redisPromise]);
+      return Boolean(supaOk);
+    } catch {
+      return false;
+    }
+  })();
+
+  return Promise.race([writePromise, timeoutPromise]);
 }
 
 /**

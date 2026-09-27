@@ -16,8 +16,7 @@ import {
 } from 'lucide-react';
 import { StoreSettings } from '../types/catalog';
 import { compressImageBase64 } from '../utils/imageUtils';
-import { redisClient } from '../lib/firestoreService';
-import { getSupabaseConfig, isSupabaseConfigured } from '../lib/supabase';
+import { getSupabaseConfig, isSupabaseConfigured, redis, uploadBase64ImageToSupabase } from '../lib/supabase';
 
 interface StoreSettingsDrawerProps {
   settings: StoreSettings;
@@ -58,12 +57,12 @@ export const StoreSettingsDrawer: React.FC<StoreSettingsDrawerProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      redisClient
+      redis
         .ping()
         .then(() => {
           setRedisStatus({
             enabled: true,
-            message: 'Upstash Redis está activo y reduciendo lecturas de Firestore.',
+            message: 'Upstash Redis está activo y acelerando las lecturas del catálogo.',
           });
         })
         .catch(() => {
@@ -94,6 +93,15 @@ export const StoreSettingsDrawer: React.FC<StoreSettingsDrawerProps> = ({
         if (reader.result) {
           const compressed = await compressImageBase64(reader.result as string, 800, 0.85);
           setFormData((prev) => ({ ...prev, storeLogo: compressed }));
+          if (isSupabaseConfigured) {
+            uploadBase64ImageToSupabase(compressed, 'branding_logo')
+              .then((cdnUrl: string) => {
+                if (cdnUrl && cdnUrl.startsWith('http')) {
+                  setFormData((prev) => ({ ...prev, storeLogo: cdnUrl }));
+                }
+              })
+              .catch(() => {});
+          }
         }
       };
       reader.readAsDataURL(file);
@@ -108,6 +116,15 @@ export const StoreSettingsDrawer: React.FC<StoreSettingsDrawerProps> = ({
         if (reader.result) {
           const compressed = await compressImageBase64(reader.result as string, 1200, 0.85);
           setFormData((prev) => ({ ...prev, coverImage: compressed }));
+          if (isSupabaseConfigured) {
+            uploadBase64ImageToSupabase(compressed, 'branding_cover')
+              .then((cdnUrl: string) => {
+                if (cdnUrl && cdnUrl.startsWith('http')) {
+                  setFormData((prev) => ({ ...prev, coverImage: cdnUrl }));
+                }
+              })
+              .catch(() => {});
+          }
         }
       };
       reader.readAsDataURL(file);
