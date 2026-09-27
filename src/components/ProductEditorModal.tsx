@@ -8,7 +8,6 @@ import {
   DollarSign,
   Plus,
   Trash2,
-  Layers,
   RefreshCw,
 } from 'lucide-react';
 import { Product, SizeVariant, ProductImageDetail } from '../types/catalog';
@@ -23,6 +22,8 @@ interface ProductEditorModalProps {
   onSave: (product: Product) => void;
 }
 
+const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
+
 export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
   product,
   isOpen,
@@ -30,15 +31,19 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
   onSave,
 }) => {
   const [formData, setFormData] = useState<Partial<Product>>({
+    id: 'prod_' + Date.now(),
+    sku: generateProductSku(),
     title: '',
     description: '',
-    image: '',
-    price: 0,
+    image: DEFAULT_IMAGE,
+    images: [DEFAULT_IMAGE],
+    price: 29.99,
     originalPrice: null,
     currency: '$',
     category: 'General',
     brand: 'Mi Tienda',
-    sizes: '',
+    sizes: 'S, M, L, XL',
+    availableSizes: ['S', 'M', 'L', 'XL'],
     badge: 'Nuevo',
     inStock: true,
   });
@@ -46,50 +51,76 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
   const [aiLoading, setAiLoading] = useState(false);
   const [selectedTone, setSelectedTone] = useState<'promotional' | 'luxury' | 'whatsapp'>('whatsapp');
 
-  const [imageList, setImageList] = useState<string[]>([]);
-  const [imageDetailsList, setImageDetailsList] = useState<ProductImageDetail[]>([]);
+  const [imageList, setImageList] = useState<string[]>([DEFAULT_IMAGE]);
+  const [imageDetailsList, setImageDetailsList] = useState<ProductImageDetail[]>([
+    { url: DEFAULT_IMAGE, price: null, code: generateSubCode() },
+  ]);
   const [useCustomVariantPrices, setUseCustomVariantPrices] = useState(false);
   const [variantsList, setVariantsList] = useState<SizeVariant[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Sync state whenever modal is opened or product changes
   useEffect(() => {
+    if (!isOpen) return;
+
     if (product) {
+      const existingImages = (product.images && product.images.length > 0)
+        ? product.images.filter((img): img is string => typeof img === 'string' && img.trim().length > 0)
+        : (product.image && typeof product.image === 'string' && product.image.trim().length > 0 ? [product.image] : [DEFAULT_IMAGE]);
+
+      const existingDetails = Array.isArray(product.imageDetails) && product.imageDetails.length > 0
+        ? product.imageDetails
+        : [];
+
+      const syncedDetails: ProductImageDetail[] = existingImages.map((img, idx) => {
+        const found = existingDetails.find((d) => d && d.url === img) || existingDetails[idx];
+        return {
+          url: img,
+          price: (found && typeof found.price === 'number') ? found.price : null,
+          code: (found && found.code && typeof found.code === 'string' && found.code.trim() !== '')
+            ? found.code.trim().toUpperCase()
+            : generateSubCode(),
+        };
+      });
+
       setFormData({
         ...product,
         sku: product.sku || generateProductSku(),
+        title: product.title || '',
+        description: product.description || '',
+        price: typeof product.price === 'number' ? product.price : 29.99,
+        originalPrice: typeof product.originalPrice === 'number' ? product.originalPrice : null,
+        currency: product.currency || '$',
+        category: product.category || 'General',
+        brand: product.brand || 'Mi Tienda',
+        sizes: product.sizes || (Array.isArray(product.availableSizes) ? product.availableSizes.join(', ') : 'S, M, L, XL'),
+        badge: product.badge || '',
+        inStock: product.inStock !== false,
+        image: existingImages[0] || DEFAULT_IMAGE,
+        images: existingImages,
       });
-      const existingImages = product.images && product.images.length > 0
-        ? product.images
-        : (product.image ? [product.image] : []);
-      setImageList(existingImages);
 
-      const existingDetails = product.imageDetails && product.imageDetails.length > 0
-        ? product.imageDetails
-        : existingImages.map(img => ({ url: img, price: null, code: generateSubCode() }));
-      // Sync imageDetailsList with existingImages to maintain order and presence
-      const syncedDetails = existingImages.map(img => {
-        const found = existingDetails.find(d => d.url === img);
-        return found
-          ? { ...found, code: (found.code && found.code.trim() !== '') ? found.code.trim().toUpperCase() : generateSubCode() }
-          : { url: img, price: null, code: generateSubCode() };
-      });
+      setImageList(existingImages);
       setImageDetailsList(syncedDetails);
 
-      if (product.sizeVariants && product.sizeVariants.length > 0) {
-        setVariantsList(product.sizeVariants);
+      if (Array.isArray(product.sizeVariants) && product.sizeVariants.length > 0) {
+        setVariantsList(product.sizeVariants.filter((v) => v && typeof v.size === 'string'));
         setUseCustomVariantPrices(true);
       } else {
         setVariantsList([]);
         setUseCustomVariantPrices(false);
       }
     } else {
-      const defaultImg = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80';
+      // Clean blank state for manual product creation
+      const newSku = generateProductSku();
+      const newSubCode = generateSubCode();
       setFormData({
         id: 'prod_' + Date.now(),
-        sku: generateProductSku(),
+        sku: newSku,
         title: '',
         description: '',
-        image: defaultImg,
-        images: [defaultImg],
+        image: DEFAULT_IMAGE,
+        images: [DEFAULT_IMAGE],
         price: 29.99,
         originalPrice: null,
         currency: '$',
@@ -100,8 +131,8 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
         badge: 'Nuevo',
         inStock: true,
       });
-      setImageList([defaultImg]);
-      setImageDetailsList([{ url: defaultImg, price: null, code: generateSubCode() }]);
+      setImageList([DEFAULT_IMAGE]);
+      setImageDetailsList([{ url: DEFAULT_IMAGE, price: null, code: newSubCode }]);
       setVariantsList([]);
       setUseCustomVariantPrices(false);
     }
@@ -128,7 +159,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
   };
 
   const handleAutoGenerateVariantsFromSizes = () => {
-    if (!formData.sizes) return;
+    if (!formData.sizes || typeof formData.sizes !== 'string') return;
     const sizeNames = formData.sizes
       .split(',')
       .map((s) => s.trim())
@@ -176,7 +207,6 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
         if (reader.result) {
           const raw = reader.result as string;
           try {
-            // Compress phone camera images down to crisp 1200px HD WebP (~120KB)
             const compressed = await compressImageBase64(raw, 1200, 0.82);
             loadedImages[index] = compressed;
           } catch {
@@ -185,12 +215,12 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
         }
         loadedCount++;
         if (loadedCount === filesToLoad.length) {
-          const filteredLoaded = loadedImages.filter(Boolean);
+          const filteredLoaded = loadedImages.filter((img): img is string => typeof img === 'string' && img.length > 0);
           setImageList((current) => {
             const combined = [...current, ...filteredLoaded].slice(0, MAX_GALLERY_IMAGES);
             setImageDetailsList((currentDetails) => {
               return combined.map((url) => {
-                const found = currentDetails.find((d) => d.url === url);
+                const found = currentDetails?.find((d) => d && d.url === url);
                 return found
                   ? { ...found, code: (found.code && found.code.trim() !== '') ? found.code.trim().toUpperCase() : generateSubCode() }
                   : { url, price: null, code: generateSubCode() };
@@ -198,7 +228,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
             });
             setFormData((f) => ({
               ...f,
-              image: combined[0] || '',
+              image: combined[0] || DEFAULT_IMAGE,
               images: combined,
             }));
             return combined;
@@ -208,12 +238,12 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
       reader.onerror = () => {
         loadedCount++;
         if (loadedCount === filesToLoad.length) {
-          const filteredLoaded = loadedImages.filter(Boolean);
+          const filteredLoaded = loadedImages.filter((img): img is string => typeof img === 'string' && img.length > 0);
           setImageList((current) => {
             const combined = [...current, ...filteredLoaded].slice(0, MAX_GALLERY_IMAGES);
             setImageDetailsList((currentDetails) => {
               return combined.map((url) => {
-                const found = currentDetails.find((d) => d.url === url);
+                const found = currentDetails?.find((d) => d && d.url === url);
                 return found
                   ? { ...found, code: (found.code && found.code.trim() !== '') ? found.code.trim().toUpperCase() : generateSubCode() }
                   : { url, price: null, code: generateSubCode() };
@@ -221,7 +251,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
             });
             setFormData((f) => ({
               ...f,
-              image: combined[0] || '',
+              image: combined[0] || DEFAULT_IMAGE,
               images: combined,
             }));
             return combined;
@@ -233,7 +263,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
   };
 
   const handleAddImageUrl = (urlInput: string) => {
-    if (!urlInput.trim()) return;
+    if (!urlInput || !urlInput.trim()) return;
     const cleanUrl = urlInput.trim();
     setImageList((prev) => {
       if (prev.length >= MAX_GALLERY_IMAGES) {
@@ -243,7 +273,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
       const updated = [...prev, cleanUrl].slice(0, MAX_GALLERY_IMAGES);
       setImageDetailsList((currentDetails) => {
         return updated.map((url) => {
-          const found = currentDetails.find((d) => d.url === url);
+          const found = currentDetails?.find((d) => d && d.url === url);
           return found
             ? { ...found, code: (found.code && found.code.trim() !== '') ? found.code.trim().toUpperCase() : generateSubCode() }
             : { url, price: null, code: generateSubCode() };
@@ -251,7 +281,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
       });
       setFormData((f) => ({
         ...f,
-        image: updated[0] || '',
+        image: updated[0] || DEFAULT_IMAGE,
         images: updated,
       }));
       return updated;
@@ -266,8 +296,8 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
       const reordered = [target, ...rest];
       setImageDetailsList((currentDetails) => {
         return reordered.map((url) => {
-          const found = currentDetails.find((d) => d.url === url);
-          return found ? found : { url, price: null, code: '' };
+          const found = currentDetails?.find((d) => d && d.url === url);
+          return found ? found : { url, price: null, code: generateSubCode() };
         });
       });
       setFormData((f) => ({
@@ -282,18 +312,19 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
   const handleRemoveImage = (index: number) => {
     setImageList((prev) => {
       const updated = prev.filter((_, i) => i !== index);
+      const finalImages = updated.length > 0 ? updated : [DEFAULT_IMAGE];
       setImageDetailsList((currentDetails) => {
-        return updated.map((url) => {
-          const found = currentDetails.find((d) => d.url === url);
-          return found ? found : { url, price: null, code: '' };
+        return finalImages.map((url) => {
+          const found = currentDetails?.find((d) => d && d.url === url);
+          return found ? found : { url, price: null, code: generateSubCode() };
         });
       });
       setFormData((f) => ({
         ...f,
-        image: updated[0] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80',
-        images: updated,
+        image: finalImages[0] || DEFAULT_IMAGE,
+        images: finalImages,
       }));
-      return updated;
+      return finalImages;
     });
   };
 
@@ -333,26 +364,25 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
     }
   };
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || isSubmitting) return;
+    if (!formData.title || !formData.title.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
-      // Active size variants with custom prices
       const activeVariants = useCustomVariantPrices
-        ? variantsList.filter((v) => v.size.trim().length > 0 && !isNaN(v.price))
+        ? variantsList.filter((v) => v && v.size && v.size.trim().length > 0 && !isNaN(v.price))
         : [];
 
       const parsedSizes = activeVariants.length > 0
         ? activeVariants.map((v) => v.size.trim())
-        : formData.sizes
+        : formData.sizes && typeof formData.sizes === 'string'
         ? formData.sizes
             .split(',')
             .map((s) => s.trim())
             .filter((s) => s.length > 0)
+        : Array.isArray(formData.availableSizes)
+        ? formData.availableSizes
         : [];
 
       const basePrice = activeVariants.length > 0
@@ -360,27 +390,31 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
         : Number(formData.price) || 0;
 
       const rawImages = imageList.length > 0
-        ? imageList
-        : [formData.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80'];
+        ? imageList.filter((img): img is string => typeof img === 'string' && img.trim().length > 0)
+        : [formData.image || DEFAULT_IMAGE];
 
       // Automatically upload Base64 images directly to Supabase Storage CDN
       const finalImages = await Promise.all(
         rawImages.map((img) =>
-          img && img.startsWith('data:')
+          img && typeof img === 'string' && img.startsWith('data:')
             ? uploadBase64ImageToSupabase(img, 'prod')
             : Promise.resolve(img)
         )
       );
 
+      const safeDetails = imageDetailsList && imageDetailsList.length > 0
+        ? imageDetailsList
+        : finalImages.map((img) => ({ url: img, price: null, code: generateSubCode() }));
+
       const finalImageDetails = await Promise.all(
-        imageDetailsList.map(async (d) => ({
-          ...d,
+        safeDetails.map(async (d) => ({
           url:
-            d.url && d.url.startsWith('data:')
+            d && d.url && typeof d.url === 'string' && d.url.startsWith('data:')
               ? await uploadBase64ImageToSupabase(d.url, 'prod')
-              : d.url,
+              : (d?.url || finalImages[0] || DEFAULT_IMAGE),
+          price: (d && typeof d.price === 'number') ? d.price : null,
           code:
-            d.code && d.code.trim() !== ''
+            d && d.code && typeof d.code === 'string' && d.code.trim() !== ''
               ? d.code.trim().toUpperCase()
               : generateSubCode(),
         }))
@@ -389,9 +423,9 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
       onSave({
         id: formData.id || 'prod_' + Date.now(),
         sku: formData.sku || generateProductSku(),
-        title: formData.title || 'Producto',
+        title: formData.title.trim(),
         description: formData.description || '',
-        image: finalImages[0],
+        image: finalImages[0] || DEFAULT_IMAGE,
         images: finalImages,
         imageDetails: finalImageDetails,
         price: basePrice,
@@ -424,8 +458,9 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
             {product ? 'Editar Producto' : 'Crear Producto Manual'}
           </h2>
           <button
+            type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-sm font-medium p-1 hover:bg-slate-100 rounded-lg transition-colors"
+            className="text-slate-400 hover:text-slate-600 text-sm font-medium p-1 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -472,7 +507,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
               <select
                 value={formData.currency || '$'}
                 onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm outline-none"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm outline-none cursor-pointer"
               >
                 <option value="$">$ (USD / MXN / COP)</option>
                 <option value="€">€ (EUR)</option>
@@ -490,7 +525,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                 type="number"
                 step="0.01"
                 required
-                value={formData.price || ''}
+                value={formData.price !== undefined && formData.price !== null ? formData.price : ''}
                 onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
                 placeholder="29.99"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm outline-none focus:border-emerald-500"
@@ -504,7 +539,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
               <input
                 type="number"
                 step="0.01"
-                value={formData.originalPrice || ''}
+                value={formData.originalPrice !== null && formData.originalPrice !== undefined ? formData.originalPrice : ''}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
@@ -552,7 +587,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
               <select
                 value={formData.badge || ''}
                 onChange={(e) => setFormData({ ...formData, badge: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm outline-none"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm outline-none cursor-pointer"
               >
                 <option value="">Sin Etiqueta</option>
                 <option value="NUEVO">NUEVO</option>
@@ -582,7 +617,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                     handleAutoGenerateVariantsFromSizes();
                   }
                 }}
-                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                   useCustomVariantPrices
                     ? 'bg-purple-700 text-white shadow-2xs'
                     : 'bg-white text-purple-800 border border-purple-300 hover:bg-purple-100/60'
@@ -603,21 +638,21 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                     <button
                       type="button"
                       onClick={() => handlePresetSizes('S, M, L, XL')}
-                      className="px-1.5 py-0.5 bg-white border border-purple-200 text-purple-700 hover:bg-purple-100 rounded font-bold"
+                      className="px-1.5 py-0.5 bg-white border border-purple-200 text-purple-700 hover:bg-purple-100 rounded font-bold cursor-pointer"
                     >
                       Ropa (S,M,L,XL)
                     </button>
                     <button
                       type="button"
                       onClick={() => handlePresetSizes('37, 38, 39, 40, 41, 42, 43')}
-                      className="px-1.5 py-0.5 bg-white border border-purple-200 text-purple-700 hover:bg-purple-100 rounded font-bold"
+                      className="px-1.5 py-0.5 bg-white border border-purple-200 text-purple-700 hover:bg-purple-100 rounded font-bold cursor-pointer"
                     >
                       Calzado (37-43)
                     </button>
                     <button
                       type="button"
                       onClick={() => handlePresetSizes('Talla Única')}
-                      className="px-1.5 py-0.5 bg-white border border-purple-200 text-purple-700 hover:bg-purple-100 rounded font-bold"
+                      className="px-1.5 py-0.5 bg-white border border-purple-200 text-purple-700 hover:bg-purple-100 rounded font-bold cursor-pointer"
                     >
                       Única
                     </button>
@@ -644,7 +679,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                     <button
                       type="button"
                       onClick={handleAutoGenerateVariantsFromSizes}
-                      className="text-[11px] text-purple-700 font-bold hover:underline"
+                      className="text-[11px] text-purple-700 font-bold hover:underline cursor-pointer"
                     >
                       ⚡ Generar desde "{formData.sizes}"
                     </button>
@@ -661,7 +696,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                         <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Talla / Nombre</label>
                         <input
                           type="text"
-                          value={variant.size}
+                          value={variant?.size || ''}
                           onChange={(e) => handleUpdateVariantRow(idx, 'size', e.target.value)}
                           placeholder="Ej: S, 38, 1 Litro..."
                           className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs outline-none font-bold text-slate-900"
@@ -673,7 +708,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                         <input
                           type="number"
                           step="0.01"
-                          value={variant.price || ''}
+                          value={variant?.price !== undefined && variant?.price !== null ? variant.price : ''}
                           onChange={(e) => handleUpdateVariantRow(idx, 'price', parseFloat(e.target.value) || 0)}
                           placeholder="29.99"
                           className="w-full px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs outline-none font-bold text-emerald-700"
@@ -685,7 +720,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                         <input
                           type="number"
                           step="0.01"
-                          value={variant.originalPrice || ''}
+                          value={variant?.originalPrice !== null && variant?.originalPrice !== undefined ? variant.originalPrice : ''}
                           onChange={(e) => handleUpdateVariantRow(idx, 'originalPrice', e.target.value ? parseFloat(e.target.value) : null)}
                           placeholder="39.99"
                           className="w-full px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs outline-none font-medium text-slate-400"
@@ -695,7 +730,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleRemoveVariantRow(idx)}
-                        className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors shrink-0 mt-3"
+                        className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors shrink-0 mt-3 cursor-pointer"
                         title="Eliminar esta talla"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -707,7 +742,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                 <button
                   type="button"
                   onClick={handleAddVariantRow}
-                  className="w-full py-2 bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                  className="w-full py-2 bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Agregar Otra Talla con Precio Especial</span>
@@ -759,7 +794,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                     el.value = '';
                   }
                 }}
-                className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-xl transition-colors"
+                className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-xl transition-colors cursor-pointer"
               >
                 Agregar URL
               </button>
@@ -775,7 +810,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                       idx === 0 ? 'border-emerald-500 shadow-sm' : 'border-slate-200 opacity-80 hover:opacity-100'
                     }`}
                   >
-                    {imgUrl && imgUrl.trim() !== '' ? (
+                    {imgUrl && typeof imgUrl === 'string' && imgUrl.trim() !== '' ? (
                       <img src={imgUrl} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400 text-xs">Sin foto</div>
@@ -794,7 +829,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                         <button
                           type="button"
                           onClick={() => handleSetPrimaryImage(idx)}
-                          className="px-1.5 py-0.5 bg-emerald-500 text-white font-extrabold text-[9px] rounded hover:bg-emerald-600 transition-colors"
+                          className="px-1.5 py-0.5 bg-emerald-500 text-white font-extrabold text-[9px] rounded hover:bg-emerald-600 transition-colors cursor-pointer"
                         >
                           Principal
                         </button>
@@ -802,7 +837,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleRemoveImage(idx)}
-                        className="px-1.5 py-0.5 bg-rose-600 text-white font-extrabold text-[9px] rounded hover:bg-rose-700 transition-colors"
+                        className="px-1.5 py-0.5 bg-rose-600 text-white font-extrabold text-[9px] rounded hover:bg-rose-700 transition-colors cursor-pointer"
                       >
                         Eliminar
                       </button>
@@ -826,11 +861,16 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                   Si dejas el precio vacío, se usará el precio base del producto. El sub-código ayudará a identificar la foto seleccionada en los pedidos de WhatsApp (ej: "ROJO", "AZUL", "MODELO A").
                 </p>
                 <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                  {imageDetailsList.map((detail, idx) => {
+                  {imageList.map((imgUrl, idx) => {
+                    const detail = imageDetailsList.find((d) => d && d.url === imgUrl) || imageDetailsList[idx] || {
+                      url: imgUrl,
+                      price: null,
+                      code: generateSubCode(),
+                    };
                     return (
                       <div key={idx} className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-xl shadow-3xs">
                         <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-slate-100 bg-slate-50">
-                          {detail.url && detail.url.trim() !== '' ? (
+                          {detail?.url && typeof detail.url === 'string' && detail.url.trim() !== '' ? (
                             <img src={detail.url} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-slate-400 text-[10px]">No</div>
@@ -843,12 +883,17 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                           <input
                             type="text"
                             placeholder="Sub-Código (Ej: CH-4812)"
-                            value={detail.code || ''}
+                            value={detail?.code || ''}
                             onChange={(e) => {
                               const val = e.target.value.toUpperCase();
-                              setImageDetailsList(current =>
-                                current.map((d, i) => i === idx ? { ...d, code: val } : d)
-                              );
+                              setImageDetailsList((current) => {
+                                const currentSafe = Array.isArray(current) ? current : [];
+                                const existingIndex = currentSafe.findIndex((d) => d && d.url === imgUrl);
+                                if (existingIndex >= 0) {
+                                  return currentSafe.map((d, i) => (i === existingIndex ? { ...d, code: val } : d));
+                                }
+                                return [...currentSafe, { url: imgUrl, price: null, code: val }];
+                              });
                             }}
                             className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs outline-none focus:border-emerald-500 font-mono font-bold text-slate-800"
                           />
@@ -856,11 +901,16 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                             type="button"
                             onClick={() => {
                               const newCode = generateSubCode();
-                              setImageDetailsList(current =>
-                                current.map((d, i) => i === idx ? { ...d, code: newCode } : d)
-                              );
+                              setImageDetailsList((current) => {
+                                const currentSafe = Array.isArray(current) ? current : [];
+                                const existingIndex = currentSafe.findIndex((d) => d && d.url === imgUrl);
+                                if (existingIndex >= 0) {
+                                  return currentSafe.map((d, i) => (i === existingIndex ? { ...d, code: newCode } : d));
+                                }
+                                return [...currentSafe, { url: imgUrl, price: null, code: newCode }];
+                              });
                             }}
-                            className="p-1 text-slate-400 hover:text-emerald-600 rounded-md hover:bg-slate-100 transition-colors shrink-0"
+                            className="p-1 text-slate-400 hover:text-emerald-600 rounded-md hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
                             title="Generar nuevo sub-código aleatorio"
                           >
                             <RefreshCw className="w-3.5 h-3.5" />
@@ -873,12 +923,17 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                               type="number"
                               step="0.01"
                               placeholder="Precio"
-                              value={detail.price === null || detail.price === undefined ? '' : detail.price}
+                              value={detail?.price !== null && detail?.price !== undefined ? detail.price : ''}
                               onChange={(e) => {
                                 const val = e.target.value === '' ? null : parseFloat(e.target.value);
-                                setImageDetailsList(current =>
-                                  current.map((d, i) => i === idx ? { ...d, price: val } : d)
-                                );
+                                setImageDetailsList((current) => {
+                                  const currentSafe = Array.isArray(current) ? current : [];
+                                  const existingIndex = currentSafe.findIndex((d) => d && d.url === imgUrl);
+                                  if (existingIndex >= 0) {
+                                    return currentSafe.map((d, i) => (i === existingIndex ? { ...d, price: val } : d));
+                                  }
+                                  return [...currentSafe, { url: imgUrl, price: val, code: generateSubCode() }];
+                                });
                               }}
                               className="w-full pl-4 pr-1 py-1 bg-slate-50 border border-slate-300 rounded-lg text-xs outline-none focus:border-emerald-500 font-semibold text-emerald-700"
                             />
@@ -902,7 +957,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                 <select
                   value={selectedTone}
                   onChange={(e) => setSelectedTone(e.target.value as any)}
-                  className="text-[11px] bg-slate-100 border border-slate-200 rounded-lg px-2 py-0.5 text-slate-700"
+                  className="text-[11px] bg-slate-100 border border-slate-200 rounded-lg px-2 py-0.5 text-slate-700 cursor-pointer"
                 >
                   <option value="whatsapp">📱 Estilo WhatsApp</option>
                   <option value="promotional">🔥 Promocional</option>
@@ -912,7 +967,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                   type="button"
                   onClick={handleEnhanceWithAi}
                   disabled={aiLoading}
-                  className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-lg transition-colors"
+                  className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {aiLoading ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
@@ -938,15 +993,16 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-xl"
+              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-xl cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors"
+              disabled={isSubmitting}
+              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-50"
             >
-              Guardar Producto
+              {isSubmitting ? 'Guardando...' : 'Guardar Producto'}
             </button>
           </div>
 
