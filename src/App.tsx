@@ -11,6 +11,7 @@ import { initialStoreSettings, initialCatalogs } from './data/initialData';
 import { Product, StoreSettings, Catalog, CartItem } from './types/catalog';
 import { isLogoUrl, optimizeProductImageSize } from './utils/imageUtils';
 import { generateProductSku, generateSubCode } from './utils/codeUtils';
+import { reconcileCatalogs, filterOutDeletedProducts } from './utils/syncUtils';
 import { getStoredItem, setStoredItem } from './lib/indexedDbStorage';
 import {
   loginSeller,
@@ -29,6 +30,7 @@ import {
   getPrimarySellerIdFromFirestore,
   rehydrateCatalog,
   rehydrateProduct,
+  clearCatalogMemoryCache,
   CustomerProfile,
 } from './lib/firestoreService';
 import { User } from 'firebase/auth';
@@ -427,18 +429,10 @@ export default function App() {
     // Unified handler for incoming cloud catalogs from Firestore or Supabase
     const applyIncomingCatalogs = (incoming: Catalog[]) => {
       if (!incoming || incoming.length === 0) return;
-      const rehydrated = incoming.map(rehydrateCatalog);
+      const reconciled = reconcileCatalogs(catalogs, incoming, getDeletedProductIds());
 
       setCatalogs((prev) => {
-        const prevTime = getCatalogTimestamp(prev);
-        const incTime = getCatalogTimestamp(rehydrated);
-
-        // If local state has a newer timestamp than incoming cloud update, ignore older update
-        if (prevTime > 0 && incTime > 0 && incTime < prevTime) {
-          return prev;
-        }
-
-        const cloudJson = JSON.stringify(rehydrated);
+        const cloudJson = JSON.stringify(reconciled);
         if (JSON.stringify(prev) === cloudJson) return prev;
 
         isRemoteCatalogUpdateRef.current = true;
@@ -447,15 +441,15 @@ export default function App() {
         try {
           localStorage.setItem('catalogcraft_catalogs', cloudJson);
         } catch {}
-        setStoredItem('cached_catalogs_latest', rehydrated).catch(() => {});
-        setStoredItem(`cached_catalogs_${targetUid}`, rehydrated).catch(() => {});
+        setStoredItem('cached_catalogs_latest', reconciled).catch(() => {});
+        setStoredItem(`cached_catalogs_${targetUid}`, reconciled).catch(() => {});
 
-        return rehydrated;
+        return reconciled;
       });
 
       setActiveCatalogId((prev) => {
-        if (!prev || !rehydrated.some((c) => c.id === prev)) {
-          return rehydrated[0]?.id || 'cat_principal';
+        if (!prev || !reconciled.some((c) => c.id === prev)) {
+          return reconciled[0]?.id || 'cat_principal';
         }
         return prev;
       });
@@ -917,6 +911,7 @@ export default function App() {
 
   const handleDeleteProduct = (id: string) => {
     addDeletedProductId(id);
+    clearCatalogMemoryCache(activeCatalogId);
     const updated = catalogs.map((cat) =>
       cat.id === activeCatalogId
         ? { ...cat, products: cat.products.filter((p) => p.id !== id) }

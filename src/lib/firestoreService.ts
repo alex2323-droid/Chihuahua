@@ -118,6 +118,16 @@ export async function fetchWithCache<T>(
 const chunkedCatalogCache = new Map<string, { updatedAt: string; products: any[] }>();
 const savedCatalogFingerprints = new Map<string, string>();
 
+export function clearCatalogMemoryCache(catalogId?: string) {
+  if (catalogId) {
+    chunkedCatalogCache.delete(catalogId);
+    savedCatalogFingerprints.delete(catalogId);
+  } else {
+    chunkedCatalogCache.clear();
+    savedCatalogFingerprints.clear();
+  }
+}
+
 let isWriteQuotaExhausted = false;
 let quotaExhaustedTimestamp = 0;
 const QUOTA_COOLDOWN_MS = 3 * 60 * 1000; // 3 minutes cooldown
