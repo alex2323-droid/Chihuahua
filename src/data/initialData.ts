@@ -15,6 +15,8 @@ export const initialStoreSettings: StoreSettings = {
   themeColor: 'emerald',
   catalogLayout: 'grid-3',
   cartAnnouncement: '✨ ¡Por compras mayores a $50, el envío a domicilio es completamente gratis! 🚚💨',
+  whatsappTemplateId: 'standard',
+  whatsappSingleTemplateId: 'standard',
 };
 
 export const initialCatalogs: Catalog[] = [

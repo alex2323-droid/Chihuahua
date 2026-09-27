@@ -43,6 +43,10 @@ export interface StoreSettings {
   themeColor: 'emerald' | 'amber' | 'cobalt' | 'rose' | 'dark' | 'violet';
   catalogLayout: 'grid-3' | 'grid-2' | 'grid-4' | 'list' | 'story';
   cartAnnouncement?: string;
+  whatsappTemplateId?: string;
+  whatsappCustomCartTemplate?: string;
+  whatsappSingleTemplateId?: string;
+  whatsappCustomSingleTemplate?: string;
 }
 
 export interface Catalog {

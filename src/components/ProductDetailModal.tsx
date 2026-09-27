@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Product, StoreSettings } from '../types/catalog';
 import { isLogoUrl, getCategoryFallbackImage } from '../utils/imageUtils';
+import { renderSingleProductWhatsAppMessage } from '../utils/whatsappTemplates';
 
 interface ProductDetailModalProps {
   isOpen: boolean;
@@ -155,17 +156,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   // WhatsApp order link
   const buildWhatsAppOrderUrl = () => {
     const rawNumber = (settings.whatsappNumber || '573000000000').replace(/[^0-9]/g, '');
-    
-    // Avoid including huge base64 data strings in the WhatsApp message text
-    const cleanImageLink = displayImage && !displayImage.startsWith('data:') ? displayImage : '';
-    const cleanSourceLink = product.sourceUrl && product.sourceUrl.startsWith('http') ? product.sourceUrl : '';
-    const linkToShow = cleanImageLink || cleanSourceLink;
-
-    const codeText = activeImageDetail?.code ? `📸 *Sub-Código:* ${activeImageDetail.code}\n` : '';
-
-    const message = `Hola *${settings.storeName}*, me interesa este producto de su catálogo:\n\n📌 *${product.title}*\n📌 *Código:* ${product.sku || 'N/A'}\n${codeText}💰 *Precio:* ${product.currency}${currentPrice.toFixed(2)}\n${
-      selectedSize ? `📏 *Talla Elegida:* ${selectedSize}\n` : product.sizes ? `📏 *Tallas:* ${product.sizes}\n` : ''
-    }${linkToShow ? `🔗 *Enlace:* ${linkToShow}\n` : ''}\n¿Tienen disponibilidad?`;
+    const message = renderSingleProductWhatsAppMessage({
+      product,
+      settings,
+      selectedSize,
+      activeImageDetail,
+      displayImage,
+      currentPrice,
+    });
     
     return `https://wa.me/${rawNumber}?text=${encodeURIComponent(message)}`;
   };

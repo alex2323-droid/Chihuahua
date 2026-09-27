@@ -20,11 +20,10 @@ import { compressImageBase64 } from '../utils/imageUtils';
 import {
   getSupabaseConfig,
   isSupabaseConfigured,
-  redis,
   uploadBase64ImageToSupabase,
-  ENABLE_UPSTASH_REDIS,
 } from '../lib/supabase';
 import { clearAllStoredItems } from '../lib/indexedDbStorage';
+import { WhatsAppTemplatesSection } from './WhatsAppTemplatesSection';
 
 interface StoreSettingsDrawerProps {
   settings: StoreSettings;
@@ -42,7 +41,6 @@ export const StoreSettingsDrawer: React.FC<StoreSettingsDrawerProps> = ({
   onHardReset,
 }) => {
   const [formData, setFormData] = useState<StoreSettings>({ ...settings });
-  const [redisStatus, setRedisStatus] = useState<{ enabled: boolean; message: string } | null>(null);
   const [isResetting, setIsResetting] = useState(false);
   
   // Supabase Configuration State
@@ -63,32 +61,6 @@ export const StoreSettingsDrawer: React.FC<StoreSettingsDrawerProps> = ({
           message: 'Supabase PostgreSQL y Almacenamiento CDN configurados.',
         });
       }
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (isOpen) {
-      if (!ENABLE_UPSTASH_REDIS) {
-        setRedisStatus({
-          enabled: false,
-          message: 'Upstash Redis desactivado temporalmente para pruebas. Todas las lecturas y escrituras van 100% directas a Supabase PostgreSQL.',
-        });
-        return;
-      }
-      redis
-        .ping()
-        .then(() => {
-          setRedisStatus({
-            enabled: true,
-            message: 'Upstash Redis está activo y acelerando las lecturas del catálogo.',
-          });
-        })
-        .catch(() => {
-          setRedisStatus({
-            enabled: false,
-            message: 'No se pudo conectar directamente con Upstash Redis.',
-          });
-        });
     }
   }, [isOpen]);
 
@@ -222,6 +194,12 @@ export const StoreSettingsDrawer: React.FC<StoreSettingsDrawerProps> = ({
                 Los clientes enviarán los pedidos directamente a este WhatsApp.
               </p>
             </div>
+
+            {/* WhatsApp Templates Configuration Section */}
+            <WhatsAppTemplatesSection
+              formData={formData}
+              onChange={(updated) => setFormData((prev) => ({ ...prev, ...updated }))}
+            />
 
             {/* Instagram */}
             <div>
@@ -440,25 +418,6 @@ export const StoreSettingsDrawer: React.FC<StoreSettingsDrawerProps> = ({
                 <span>{isResetting ? 'Limpiando y Sincronizando...' : 'Ejecutar Hard Reset y Recargar'}</span>
               </button>
             </div>
-
-            {/* Upstash Redis Cache Status Banner */}
-            {redisStatus && (
-              <div
-                className={`p-3.5 rounded-2xl border text-xs flex items-start gap-2.5 ${
-                  redisStatus.enabled
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
-                    : 'bg-amber-50 border-amber-200 text-amber-900'
-                }`}
-              >
-                <Zap className={`w-4 h-4 shrink-0 mt-0.5 ${redisStatus.enabled ? 'text-emerald-600' : 'text-amber-600'}`} />
-                <div>
-                  <span className="font-bold block mb-0.5">
-                    {redisStatus.enabled ? 'Aceleración de Caché Upstash Redis Activa' : 'Caché Upstash Redis Inactivo'}
-                  </span>
-                  <p className="text-[11px] leading-relaxed opacity-90">{redisStatus.message}</p>
-                </div>
-              </div>
-            )}
 
           </form>
 

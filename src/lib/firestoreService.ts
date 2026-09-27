@@ -20,98 +20,16 @@ import {
 import { db, auth } from './firebase';
 import { StoreSettings, Catalog, Product } from '../types/catalog';
 import { getStoredItem, setStoredItem } from './indexedDbStorage';
-import { Redis } from '@upstash/redis';
-
-// Upstash Redis Client Configuration
-export const UPSTASH_REDIS_REST_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_UPSTASH_REDIS_REST_URL) ||
-  (typeof process !== 'undefined' && process.env?.UPSTASH_REDIS_REST_URL) ||
-  'https://touched-gnat-44365.upstash.io';
-export const UPSTASH_REDIS_REST_TOKEN =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_UPSTASH_REDIS_REST_TOKEN) ||
-  (typeof process !== 'undefined' && process.env?.UPSTASH_REDIS_REST_TOKEN) ||
-  'Aa1NAAIgcDE4MTdlZGI2NGQwZDg0YWI5YjA5MmJmMjdjZDRmZmJiMQ';
-
-export const redisClient = new Redis({
-  url: UPSTASH_REDIS_REST_URL,
-  token: UPSTASH_REDIS_REST_TOKEN,
-});
-
-// Cache TTL constant (24 hours = 86,400 seconds)
-export const REDIS_CACHE_TTL = 86400;
 
 /**
- * Middleware para cachear consultas de Firestore en Upstash Redis vía HTTP REST.
- * 1. Intenta leer primero de Redis usando fetch(UPSTASH_REDIS_REST_URL + '/get/' + key).
- * 2. Si no existe o falla, ejecuta la promesa de Firestore.
- * 3. Guarda el resultado en Redis usando fetch(UPSTASH_REDIS_REST_URL + '/setex/' + key + '/' + ttl + '/' + value).
+ * Direct fetch helper that executes the Firestore operation directly without stale Redis caches.
  */
 export async function fetchWithCache<T>(
-  key: string,
+  _key: string,
   firestorePromise: Promise<T> | (() => Promise<T>),
-  ttl: number = REDIS_CACHE_TTL
+  _ttl?: number
 ): Promise<T> {
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${UPSTASH_REDIS_REST_TOKEN}`,
-  };
-
-  // 1. Intentar obtener el dato de Redis usando fetch(UPSTASH_REDIS_REST_URL + '/get/' + key)
-  try {
-    const getUrl = `${UPSTASH_REDIS_REST_URL}/get/${encodeURIComponent(key)}`;
-    const res = await fetch(getUrl, {
-      method: 'GET',
-      headers,
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.result !== null && data.result !== undefined) {
-        try {
-          const parsed = typeof data.result === 'string' ? JSON.parse(data.result) : data.result;
-          return parsed as T;
-        } catch {
-          return data.result as T;
-        }
-      }
-    }
-  } catch (err) {
-    console.warn(`[Upstash Redis Cache Miss/Error for "${key}"]`, err);
-  }
-
-  // 2. Si no existe o falla, ejecutar la promesa de Firestore
-  const result: T =
-    typeof firestorePromise === 'function' ? await firestorePromise() : await firestorePromise;
-
-  // 3. Guardar el resultado en Redis usando fetch(UPSTASH_REDIS_REST_URL + '/setex/' + key + '/' + ttl + '/' + value)
-  if (result !== null && result !== undefined) {
-    try {
-      const value = typeof result === 'string' ? result : JSON.stringify(result);
-      const encodedKey = encodeURIComponent(key);
-      const encodedValue = encodeURIComponent(value);
-      const setexUrl = `${UPSTASH_REDIS_REST_URL}/setex/${encodedKey}/${ttl}/${encodedValue}`;
-
-      const setRes = await fetch(setexUrl, {
-        method: 'GET',
-        headers,
-      });
-
-      // Fallback en caso de que el payload exceda el tamaño máximo de una URL (HTTP 414 URI Too Long)
-      if (!setRes.ok && (setRes.status === 414 || setRes.status >= 400)) {
-        await fetch(`${UPSTASH_REDIS_REST_URL}/set/${encodedKey}?ex=${ttl}`, {
-          method: 'POST',
-          headers: {
-            ...headers,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(value),
-        }).catch(() => {});
-      }
-    } catch (saveErr) {
-      console.warn(`[Upstash Redis Cache Save Error for "${key}"]`, saveErr);
-    }
-  }
-
-  return result;
+  return typeof firestorePromise === 'function' ? await firestorePromise() : await firestorePromise;
 }
 
 // In-memory cache for chunked catalogs to avoid redundant network reads and reduce Firestore quota usage
@@ -433,7 +351,7 @@ function optimizeImagesForFirestore<T>(data: T): T {
   return data;
 }
 
-// Save Store Settings to Firestore under seller account and update Redis cache
+// Save Store Settings to Firestore under seller account
 export async function saveStoreSettingsToFirestore(
   sellerId: string,
   settings: StoreSettings
@@ -441,11 +359,6 @@ export async function saveStoreSettingsToFirestore(
   const path = `sellers/${sellerId}/settings/current`;
   setStoredItem(`cached_settings_${sellerId}`, settings).catch(() => {});
   setStoredItem('cached_settings_latest', settings).catch(() => {});
-
-  // Update Redis cache immediately
-  try {
-    redisClient.set(`settings:${sellerId}`, JSON.stringify(settings), { ex: REDIS_CACHE_TTL }).catch(() => {});
-  } catch {}
 
   try {
     const optimized = optimizeImagesForFirestore(settings);
@@ -459,25 +372,19 @@ export async function saveStoreSettingsToFirestore(
   }
 }
 
-// Load Store Settings using fetchWithCache middleware (Redis first, fallback to Firestore)
+// Load Store Settings directly from Firestore
 export async function loadStoreSettingsFromFirestore(sellerId: string): Promise<StoreSettings | null> {
   const path = `sellers/${sellerId}/settings/current`;
-  return fetchWithCache<StoreSettings | null>(
-    `settings:${sellerId}`,
-    async () => {
-      try {
-        const snap = await getDoc(doc(db, 'sellers', sellerId, 'settings', 'current'));
-        if (snap.exists()) {
-          return snap.data() as StoreSettings;
-        }
-        return null;
-      } catch (err) {
-        handleFirestoreError(err, OperationType.GET, path);
-        return null;
-      }
-    },
-    REDIS_CACHE_TTL
-  );
+  try {
+    const snap = await getDoc(doc(db, 'sellers', sellerId, 'settings', 'current'));
+    if (snap.exists()) {
+      return snap.data() as StoreSettings;
+    }
+    return null;
+  } catch (err) {
+    handleFirestoreError(err, OperationType.GET, path);
+    return null;
+  }
 }
 
 // De-duplicates image base64 strings inside a Product to drastically reduce payload size before saving to Firestore.
@@ -811,19 +718,12 @@ export async function saveAllCatalogsToFirestore(
   catalogs: Catalog[],
   force = false
 ): Promise<void> {
-  // 1. Immediately update Upstash Redis cache (20ms latency!)
-  try {
-    await redisClient.set(`catalog:${sellerId}`, JSON.stringify(catalogs), { ex: REDIS_CACHE_TTL });
-  } catch (redisErr) {
-    console.warn('Immediate Upstash Redis set error:', redisErr);
-  }
-
-  // 2. Ensure authenticated as primary seller before committing to Firestore
+  // 1. Ensure authenticated as primary seller before committing to Firestore
   if (sellerId === PRIMARY_SELLER_UID && (!auth.currentUser || auth.currentUser.uid !== PRIMARY_SELLER_UID)) {
     await ensureSellerAuthenticated();
   }
 
-  // 3. Persist each catalog to Cloud Firestore
+  // 2. Persist each catalog to Cloud Firestore
   for (const cat of catalogs) {
     await saveCatalogToFirestore(sellerId, cat, force);
   }
@@ -856,16 +756,12 @@ export async function deleteCatalogFromFirestore(
     } catch {}
 
     await deleteDoc(doc(db, 'sellers', sellerId, 'catalogs', catalogId));
-
-    // Invalidate Redis cache
-    redisClient.del(`catalog:${sellerId}`).catch(() => {});
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, path);
   }
 }
 
 // Subscribe to all Catalogs for a seller (transparently reassembles chunked high-res catalogs)
-// Real-time synchronization powered by Upstash Redis and Firestore
 export function subscribeToSellerCatalogs(
   sellerId: string,
   onData: (catalogs: Catalog[]) => void,
@@ -874,29 +770,7 @@ export function subscribeToSellerCatalogs(
   let isUnsubscribed = false;
   let lastKnownFingerprint = '';
 
-  // 1. Ultra-fast Redis poll (runs immediately + every 3.5s) to bypass Firestore quota limits
-  const pollRedis = async () => {
-    if (isUnsubscribed) return;
-    try {
-      const cached = await redisClient.get<Catalog[] | string>(`catalog:${sellerId}`);
-      if (cached && !isUnsubscribed) {
-        const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const rehydratedList = (parsed as Catalog[]).map(rehydrateCatalog);
-          const fingerprint = `${rehydratedList.length}_${rehydratedList.reduce((s, c) => s + (c.products?.length || 0), 0)}`;
-          if (fingerprint !== lastKnownFingerprint) {
-            lastKnownFingerprint = fingerprint;
-            onData(rehydratedList);
-          }
-        }
-      }
-    } catch {}
-  };
-
-  pollRedis();
-  const pollInterval = setInterval(pollRedis, 3500);
-
-  // 2. Firestore real-time snapshot listener
+  // Real-time Firestore snapshot listener
   const path = `sellers/${sellerId}/catalogs`;
   const unsubSnapshot = onSnapshot(
     collection(db, 'sellers', sellerId, 'catalogs'),
@@ -996,8 +870,6 @@ export function subscribeToSellerCatalogs(
   );
 
   return () => {
-    isUnsubscribed = true;
-    clearInterval(pollInterval);
     unsubSnapshot();
   };
 }

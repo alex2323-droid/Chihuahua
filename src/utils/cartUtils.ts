@@ -1,4 +1,5 @@
 import { CartItem, StoreSettings } from '../types/catalog';
+import { renderCartWhatsAppMessage } from './whatsappTemplates';
 
 /**
  * Gets the unit price for a cart item, preferring custom variant price or product base price.
@@ -54,38 +55,7 @@ export const generateWhatsAppOrderMessage = ({
   customerName = '',
   notes = '',
 }: WhatsAppMessageOptions): string => {
-  if (!cart || cart.length === 0) return '';
-
-  const totalAmount = calculateCartTotal(cart);
-  const storeName = settings.storeName || 'Tienda';
-  const currencySymbol = settings.currencySymbol || '$';
-
-  let message = `👋 Hola *${storeName}*, me gustaría realizar el siguiente pedido:\n\n📋 *PRODUCTOS SELECCIONADOS:*\n`;
-
-  cart.forEach((item, index) => {
-    const itemPrice = getItemUnitPrice(item);
-    const skuText = item.product.sku ? ` [Cód: ${item.product.sku}]` : '';
-    const sizeText = item.selectedSize ? ` 📏 (Talla: *${item.selectedSize}*)` : '';
-    const codeText = item.selectedImageCode ? ` 📸 [Sub-Cód: *${item.selectedImageCode}*]` : '';
-    const currency = item.product.currency || currencySymbol;
-    const subtotal = (itemPrice * item.quantity).toFixed(2);
-
-    message += `${index + 1}. *${item.product.title}*${skuText}${sizeText}${codeText}\n   Cantidad: ${item.quantity}x | Precio: ${currency}${subtotal}\n`;
-  });
-
-  message += `\n💰 *TOTAL A PAGAR: ${currencySymbol}${totalAmount.toFixed(2)}*\n`;
-
-  if (customerName && customerName.trim()) {
-    message += `\n👤 *Nombre del Cliente:* ${customerName.trim()}`;
-  }
-
-  if (notes && notes.trim()) {
-    message += `\n📝 *Notas/Dirección de Entrega:* ${notes.trim()}`;
-  }
-
-  message += `\n\n¡Quedo a la espera de su confirmación!`;
-
-  return message;
+  return renderCartWhatsAppMessage({ cart, settings, customerName, notes });
 };
 
 /**

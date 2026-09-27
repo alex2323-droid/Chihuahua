@@ -1,7 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Catalog, StoreSettings } from '../types/catalog';
 import { rehydrateProduct } from './firestoreService';
-import { Redis } from '@upstash/redis';
 
 const DEFAULT_SUPABASE_URL = 'https://dihwmebijaxeulmrjmrh.supabase.co';
 const DEFAULT_SUPABASE_ANON_KEY =
@@ -36,25 +35,6 @@ export const supabase: SupabaseClient | null = isSupabaseConfigured
       },
     })
   : null;
-
-// Upstash Redis Client Configuration (Disabled for test mode)
-export const ENABLE_UPSTASH_REDIS = false;
-
-export const UPSTASH_REDIS_REST_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_UPSTASH_REDIS_REST_URL) ||
-  (typeof process !== 'undefined' && process.env?.UPSTASH_REDIS_REST_URL) ||
-  'https://touched-gnat-44365.upstash.io';
-export const UPSTASH_REDIS_REST_TOKEN =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_UPSTASH_REDIS_REST_TOKEN) ||
-  (typeof process !== 'undefined' && process.env?.UPSTASH_REDIS_REST_TOKEN) ||
-  'Aa1NAAIgcDE4MTdlZGI2NGQwZDg0YWI5YjA5MmJmMjdjZDRmZmJiMQ';
-
-export const redis = new Redis({
-  url: UPSTASH_REDIS_REST_URL,
-  token: UPSTASH_REDIS_REST_TOKEN,
-});
-
-export const REDIS_CACHE_TTL = 86400; // 24 hours
 
 /**
  * Uploads a Base64 or Blob product image directly to Supabase Storage (CDN).
@@ -250,40 +230,18 @@ export async function saveSettingsToSupabase(
 }
 
 /**
- * Unified Cloud Fetch: Direct Supabase PostgreSQL (or Upstash Redis when enabled)
+ * Unified Cloud Fetch: Direct Supabase PostgreSQL
  */
 export async function fetchCatalogsFromCloud(sellerId: string): Promise<Catalog[] | null> {
-  if (ENABLE_UPSTASH_REDIS) {
-    try {
-      const cached = await redis.get(`catalog:${sellerId}`);
-      if (cached) {
-        const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((cat: any) => ({
-            ...cat,
-            products: Array.isArray(cat.products) ? cat.products.map(rehydrateProduct) : [],
-          }));
-        }
-      }
-    } catch (redisErr) {
-      console.warn('Redis cache read warning:', redisErr);
-    }
-  }
-
-  // Fetch directly from Supabase PostgreSQL (source of truth)
   const fromSupa = await fetchCatalogsFromSupabase(sellerId);
   if (fromSupa && fromSupa.length > 0) {
-    if (ENABLE_UPSTASH_REDIS) {
-      redis.set(`catalog:${sellerId}`, JSON.stringify(fromSupa), { ex: REDIS_CACHE_TTL }).catch(() => {});
-    }
     return fromSupa;
   }
-
   return null;
 }
 
 /**
- * Unified Cloud Save: Direct write to Supabase PostgreSQL (and Upstash Redis if enabled)
+ * Unified Cloud Save: Direct write to Supabase PostgreSQL
  */
 export async function saveCatalogsToCloud(
   sellerId: string,
@@ -297,14 +255,7 @@ export async function saveCatalogsToCloud(
 
   const writePromise = (async () => {
     try {
-      const supaPromise = saveCatalogsToSupabase(sellerId, catalogs);
-      const redisPromise = ENABLE_UPSTASH_REDIS
-        ? redis
-            .set(`catalog:${sellerId}`, JSON.stringify(catalogs), { ex: REDIS_CACHE_TTL })
-            .catch((err) => console.warn('Redis cache save warning:', err))
-        : Promise.resolve(null);
-
-      const [supaOk] = await Promise.all([supaPromise, redisPromise]);
+      const supaOk = await saveCatalogsToSupabase(sellerId, catalogs);
       return Boolean(supaOk);
     } catch {
       return false;
@@ -318,21 +269,8 @@ export async function saveCatalogsToCloud(
  * Unified Cloud Settings Fetch
  */
 export async function fetchSettingsFromCloud(sellerId: string): Promise<StoreSettings | null> {
-  if (ENABLE_UPSTASH_REDIS) {
-    try {
-      const cached = await redis.get(`settings:${sellerId}`);
-      if (cached) {
-        const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
-        if (parsed && typeof parsed === 'object') return parsed as StoreSettings;
-      }
-    } catch {}
-  }
-
   const fromSupa = await fetchSettingsFromSupabase(sellerId);
   if (fromSupa) {
-    if (ENABLE_UPSTASH_REDIS) {
-      redis.set(`settings:${sellerId}`, JSON.stringify(fromSupa), { ex: REDIS_CACHE_TTL }).catch(() => {});
-    }
     return fromSupa;
   }
   return null;
@@ -351,14 +289,7 @@ export async function saveSettingsToCloud(
 
   const writePromise = (async () => {
     try {
-      const supaPromise = saveSettingsToSupabase(sellerId, settings);
-      const redisPromise = ENABLE_UPSTASH_REDIS
-        ? redis
-            .set(`settings:${sellerId}`, JSON.stringify(settings), { ex: REDIS_CACHE_TTL })
-            .catch(() => {})
-        : Promise.resolve(null);
-
-      const [supaOk] = await Promise.all([supaPromise, redisPromise]);
+      const supaOk = await saveSettingsToSupabase(sellerId, settings);
       return Boolean(supaOk);
     } catch {
       return false;
@@ -375,7 +306,6 @@ export function subscribeToCatalogs(
   sellerId: string,
   onData: (catalogs: Catalog[]) => void
 ): () => void {
-  // Initial fetch from Redis / Supabase
   fetchCatalogsFromCloud(sellerId).then((cats) => {
     if (cats && cats.length > 0) {
       onData(cats);
@@ -397,7 +327,6 @@ export function subscribeToCatalogs(
       async () => {
         const fresh = await fetchCatalogsFromSupabase(sellerId);
         if (fresh && fresh.length > 0) {
-          redis.set(`catalog:${sellerId}`, JSON.stringify(fresh), { ex: REDIS_CACHE_TTL }).catch(() => {});
           onData(fresh);
         }
       }
@@ -435,7 +364,6 @@ export function subscribeToSettings(
       async () => {
         const fresh = await fetchSettingsFromSupabase(sellerId);
         if (fresh) {
-          redis.set(`settings:${sellerId}`, JSON.stringify(fresh), { ex: REDIS_CACHE_TTL }).catch(() => {});
           onData(fresh);
         }
       }
