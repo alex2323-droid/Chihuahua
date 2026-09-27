@@ -83,3 +83,19 @@ export async function removeStoredItem(key: string): Promise<void> {
     // Ignore storage remove failure
   }
 }
+
+export async function clearAllStoredItems(): Promise<void> {
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.clear();
+
+      req.onsuccess = () => resolve();
+      req.onerror = () => resolve();
+    });
+  } catch {
+    // Ignore storage clear failure
+  }
+}

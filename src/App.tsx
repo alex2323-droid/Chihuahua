@@ -13,7 +13,7 @@ import { Product, StoreSettings, Catalog, CartItem } from './types/catalog';
 import { isLogoUrl, optimizeProductImageSize } from './utils/imageUtils';
 import { generateProductSku, generateSubCode } from './utils/codeUtils';
 import { reconcileCatalogs, filterOutDeletedProducts } from './utils/syncUtils';
-import { getStoredItem, setStoredItem } from './lib/indexedDbStorage';
+import { getStoredItem, setStoredItem, clearAllStoredItems } from './lib/indexedDbStorage';
 import {
   loginSeller,
   logoutSeller,
@@ -746,6 +746,62 @@ export default function App() {
       setSyncToastMessage('Guardado en almacenamiento local y Redis.');
       setTimeout(() => setSyncToastMessage(null), 3000);
     } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleHardReset = async () => {
+    // 1. Preserve critical seller/user login session in memory so credentials aren't lost
+    const savedUserRole = localStorage.getItem('catalogcraft_user_role');
+    const savedUsername = localStorage.getItem('catalogcraft_username');
+    const savedSupabaseUrl = localStorage.getItem('catalogcraft_supabase_url');
+    const savedSupabaseKey = localStorage.getItem('catalogcraft_supabase_key');
+
+    // 2. Clear ALL localStorage and deleted PIDs tracking
+    localStorage.clear();
+
+    // 3. Restore essential session info if present
+    if (savedUserRole) localStorage.setItem('catalogcraft_user_role', savedUserRole);
+    if (savedUsername) localStorage.setItem('catalogcraft_username', savedUsername);
+    if (savedSupabaseUrl) localStorage.setItem('catalogcraft_supabase_url', savedSupabaseUrl);
+    if (savedSupabaseKey) localStorage.setItem('catalogcraft_supabase_key', savedSupabaseKey);
+
+    // 4. Clear IndexedDB storage completely
+    await clearAllStoredItems();
+
+    // 5. Invalidate in-memory caches
+    clearCatalogMemoryCache();
+
+    // 6. Direct fresh re-fetch from Supabase / Redis / Firestore
+    const targetUid = isSeller && sellerUid ? sellerUid : PRIMARY_STORE_UID;
+    setIsLoadingCatalogs(true);
+    setIsSyncing(true);
+
+    try {
+      const [freshCatalogs, freshSettings] = await Promise.all([
+        fetchCatalogsFromCloud(targetUid),
+        fetchSettingsFromCloud(targetUid),
+      ]);
+
+      if (freshCatalogs && freshCatalogs.length > 0) {
+        setCatalogs(freshCatalogs);
+        localStorage.setItem('catalogcraft_catalogs', JSON.stringify(freshCatalogs));
+        await setStoredItem('cached_catalogs_latest', freshCatalogs);
+      }
+
+      if (freshSettings) {
+        setSettings(freshSettings);
+        localStorage.setItem('catalogcraft_settings', JSON.stringify(freshSettings));
+        await setStoredItem('cached_settings_latest', freshSettings);
+      }
+
+      setSyncToastMessage('¡Hard Reset completado! Catálogos y ajustes sincronizados limpiamente desde la nube.');
+      setTimeout(() => setSyncToastMessage(null), 4000);
+    } catch (err) {
+      console.warn('Error fetching fresh state during Hard Reset:', err);
+      window.location.reload();
+    } finally {
+      setIsLoadingCatalogs(false);
       setIsSyncing(false);
     }
   };
@@ -1741,6 +1797,7 @@ export default function App() {
           setSyncToastMessage('¡Ajustes de tienda guardados exitosamente!');
           setTimeout(() => setSyncToastMessage(null), 3000);
         }}
+        onHardReset={handleHardReset}
       />
 
       <WhatsAppCartDrawer

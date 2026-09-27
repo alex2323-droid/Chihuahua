@@ -13,16 +13,19 @@ import {
   AlertCircle,
   Database,
   ExternalLink,
+  RotateCcw,
 } from 'lucide-react';
 import { StoreSettings } from '../types/catalog';
 import { compressImageBase64 } from '../utils/imageUtils';
 import { getSupabaseConfig, isSupabaseConfigured, redis, uploadBase64ImageToSupabase } from '../lib/supabase';
+import { clearAllStoredItems } from '../lib/indexedDbStorage';
 
 interface StoreSettingsDrawerProps {
   settings: StoreSettings;
   isOpen: boolean;
   onClose: () => void;
   onSave: (newSettings: StoreSettings) => void;
+  onHardReset?: () => Promise<void> | void;
 }
 
 export const StoreSettingsDrawer: React.FC<StoreSettingsDrawerProps> = ({
@@ -30,9 +33,11 @@ export const StoreSettingsDrawer: React.FC<StoreSettingsDrawerProps> = ({
   isOpen,
   onClose,
   onSave,
+  onHardReset,
 }) => {
   const [formData, setFormData] = useState<StoreSettings>({ ...settings });
   const [redisStatus, setRedisStatus] = useState<{ enabled: boolean; message: string } | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
   
   // Supabase Configuration State
   const initialSupabase = getSupabaseConfig();
@@ -375,6 +380,52 @@ export const StoreSettingsDrawer: React.FC<StoreSettingsDrawerProps> = ({
                   </button>
                 </div>
               </div>
+            </div>
+
+            {/* Hard Reset / Limpieza Profunda de Caché */}
+            <div className="p-4 rounded-2xl border border-rose-200 bg-rose-50/50 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <RotateCcw className="w-4 h-4 text-rose-600" />
+                  <span className="text-xs font-bold text-rose-950">Restablecimiento Forzado (Hard Reset)</span>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
+                  Antifantasmas
+                </span>
+              </div>
+              <p className="text-[11px] text-rose-700/90 leading-relaxed">
+                ¿Ves productos eliminados que reaparecen o cambios que no se reflejan? Esta acción borra todo el almacenamiento local (<code className="bg-rose-100/80 px-1 py-0.5 rounded font-mono text-[10px]">localStorage</code>, <code className="bg-rose-100/80 px-1 py-0.5 rounded font-mono text-[10px]">catalogcraft_deleted_pids</code> e IndexedDB) y vuelve a descargar el estado limpio y fresco directamente desde la nube de Firestore / Supabase.
+              </p>
+              <button
+                type="button"
+                onClick={async () => {
+                  const confirmed = window.confirm(
+                    '¿Estás seguro de ejecutar un Hard Reset?\n\nEsto limpiará todo el caché residual del navegador (localStorage, IndexedDB y productos borrados) y descargará el catálogo limpio y actualizado directamente desde la nube.'
+                  );
+                  if (!confirmed) return;
+
+                  setIsResetting(true);
+                  try {
+                    if (onHardReset) {
+                      await onHardReset();
+                    } else {
+                      localStorage.clear();
+                      await clearAllStoredItems();
+                      window.location.reload();
+                    }
+                  } catch (err) {
+                    console.error('Error during hard reset:', err);
+                    window.location.reload();
+                  } finally {
+                    setIsResetting(false);
+                  }
+                }}
+                disabled={isResetting}
+                className="w-full py-2.5 px-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <RotateCcw className={`w-3.5 h-3.5 ${isResetting ? 'animate-spin' : ''}`} />
+                <span>{isResetting ? 'Limpiando y Sincronizando...' : 'Ejecutar Hard Reset y Recargar'}</span>
+              </button>
             </div>
 
             {/* Upstash Redis Cache Status Banner */}
