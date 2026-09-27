@@ -37,7 +37,9 @@ export const supabase: SupabaseClient | null = isSupabaseConfigured
     })
   : null;
 
-// Upstash Redis Client Configuration
+// Upstash Redis Client Configuration (Disabled for test mode)
+export const ENABLE_UPSTASH_REDIS = false;
+
 export const UPSTASH_REDIS_REST_URL =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_UPSTASH_REDIS_REST_URL) ||
   (typeof process !== 'undefined' && process.env?.UPSTASH_REDIS_REST_URL) ||
@@ -248,29 +250,32 @@ export async function saveSettingsToSupabase(
 }
 
 /**
- * Unified Cloud Fetch: Upstash Redis (fast cache) + Supabase PostgreSQL (persistent source of truth)
+ * Unified Cloud Fetch: Direct Supabase PostgreSQL (or Upstash Redis when enabled)
  */
 export async function fetchCatalogsFromCloud(sellerId: string): Promise<Catalog[] | null> {
-  // 1. Try Upstash Redis first (instant in-memory delivery)
-  try {
-    const cached = await redis.get(`catalog:${sellerId}`);
-    if (cached) {
-      const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map((cat: any) => ({
-          ...cat,
-          products: Array.isArray(cat.products) ? cat.products.map(rehydrateProduct) : [],
-        }));
+  if (ENABLE_UPSTASH_REDIS) {
+    try {
+      const cached = await redis.get(`catalog:${sellerId}`);
+      if (cached) {
+        const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((cat: any) => ({
+            ...cat,
+            products: Array.isArray(cat.products) ? cat.products.map(rehydrateProduct) : [],
+          }));
+        }
       }
+    } catch (redisErr) {
+      console.warn('Redis cache read warning:', redisErr);
     }
-  } catch (redisErr) {
-    console.warn('Redis cache read warning:', redisErr);
   }
 
-  // 2. Fetch directly from Supabase PostgreSQL
+  // Fetch directly from Supabase PostgreSQL (source of truth)
   const fromSupa = await fetchCatalogsFromSupabase(sellerId);
   if (fromSupa && fromSupa.length > 0) {
-    redis.set(`catalog:${sellerId}`, JSON.stringify(fromSupa), { ex: REDIS_CACHE_TTL }).catch(() => {});
+    if (ENABLE_UPSTASH_REDIS) {
+      redis.set(`catalog:${sellerId}`, JSON.stringify(fromSupa), { ex: REDIS_CACHE_TTL }).catch(() => {});
+    }
     return fromSupa;
   }
 
@@ -278,8 +283,7 @@ export async function fetchCatalogsFromCloud(sellerId: string): Promise<Catalog[
 }
 
 /**
- * Unified Cloud Save: Ultra-fast parallel write to Supabase PostgreSQL + Upstash Redis
- * Completes in ~100-200ms without Firestore quota limits or freezing.
+ * Unified Cloud Save: Direct write to Supabase PostgreSQL (and Upstash Redis if enabled)
  */
 export async function saveCatalogsToCloud(
   sellerId: string,
@@ -294,9 +298,11 @@ export async function saveCatalogsToCloud(
   const writePromise = (async () => {
     try {
       const supaPromise = saveCatalogsToSupabase(sellerId, catalogs);
-      const redisPromise = redis
-        .set(`catalog:${sellerId}`, JSON.stringify(catalogs), { ex: REDIS_CACHE_TTL })
-        .catch((err) => console.warn('Redis cache save warning:', err));
+      const redisPromise = ENABLE_UPSTASH_REDIS
+        ? redis
+            .set(`catalog:${sellerId}`, JSON.stringify(catalogs), { ex: REDIS_CACHE_TTL })
+            .catch((err) => console.warn('Redis cache save warning:', err))
+        : Promise.resolve(null);
 
       const [supaOk] = await Promise.all([supaPromise, redisPromise]);
       return Boolean(supaOk);
@@ -312,24 +318,28 @@ export async function saveCatalogsToCloud(
  * Unified Cloud Settings Fetch
  */
 export async function fetchSettingsFromCloud(sellerId: string): Promise<StoreSettings | null> {
-  try {
-    const cached = await redis.get(`settings:${sellerId}`);
-    if (cached) {
-      const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
-      if (parsed && typeof parsed === 'object') return parsed as StoreSettings;
-    }
-  } catch {}
+  if (ENABLE_UPSTASH_REDIS) {
+    try {
+      const cached = await redis.get(`settings:${sellerId}`);
+      if (cached) {
+        const parsed = typeof cached === 'string' ? JSON.parse(cached) : cached;
+        if (parsed && typeof parsed === 'object') return parsed as StoreSettings;
+      }
+    } catch {}
+  }
 
   const fromSupa = await fetchSettingsFromSupabase(sellerId);
   if (fromSupa) {
-    redis.set(`settings:${sellerId}`, JSON.stringify(fromSupa), { ex: REDIS_CACHE_TTL }).catch(() => {});
+    if (ENABLE_UPSTASH_REDIS) {
+      redis.set(`settings:${sellerId}`, JSON.stringify(fromSupa), { ex: REDIS_CACHE_TTL }).catch(() => {});
+    }
     return fromSupa;
   }
   return null;
 }
 
 /**
- * Unified Cloud Settings Save: Fast parallel write to Supabase + Redis
+ * Unified Cloud Settings Save: Direct write to Supabase
  */
 export async function saveSettingsToCloud(
   sellerId: string,
@@ -342,9 +352,11 @@ export async function saveSettingsToCloud(
   const writePromise = (async () => {
     try {
       const supaPromise = saveSettingsToSupabase(sellerId, settings);
-      const redisPromise = redis
-        .set(`settings:${sellerId}`, JSON.stringify(settings), { ex: REDIS_CACHE_TTL })
-        .catch(() => {});
+      const redisPromise = ENABLE_UPSTASH_REDIS
+        ? redis
+            .set(`settings:${sellerId}`, JSON.stringify(settings), { ex: REDIS_CACHE_TTL })
+            .catch(() => {})
+        : Promise.resolve(null);
 
       const [supaOk] = await Promise.all([supaPromise, redisPromise]);
       return Boolean(supaOk);

@@ -17,7 +17,13 @@ import {
 } from 'lucide-react';
 import { StoreSettings } from '../types/catalog';
 import { compressImageBase64 } from '../utils/imageUtils';
-import { getSupabaseConfig, isSupabaseConfigured, redis, uploadBase64ImageToSupabase } from '../lib/supabase';
+import {
+  getSupabaseConfig,
+  isSupabaseConfigured,
+  redis,
+  uploadBase64ImageToSupabase,
+  ENABLE_UPSTASH_REDIS,
+} from '../lib/supabase';
 import { clearAllStoredItems } from '../lib/indexedDbStorage';
 
 interface StoreSettingsDrawerProps {
@@ -62,6 +68,13 @@ export const StoreSettingsDrawer: React.FC<StoreSettingsDrawerProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      if (!ENABLE_UPSTASH_REDIS) {
+        setRedisStatus({
+          enabled: false,
+          message: 'Upstash Redis desactivado temporalmente para pruebas. Todas las lecturas y escrituras van 100% directas a Supabase PostgreSQL.',
+        });
+        return;
+      }
       redis
         .ping()
         .then(() => {
