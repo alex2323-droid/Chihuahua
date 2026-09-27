@@ -428,6 +428,13 @@ export default function App() {
       if (!incoming || incoming.length === 0) return;
       const reconciled = reconcileCatalogs(catalogs, incoming, getDeletedProductIds());
 
+      // If the seller has deleted products that are still in incoming cloud data, purge the cloud immediately!
+      const incomingProdCount = incoming.reduce((acc, c) => acc + (c.products?.length || 0), 0);
+      const reconciledProdCount = reconciled.reduce((acc, c) => acc + (c.products?.length || 0), 0);
+      if (isSeller && targetUid && reconciledProdCount < incomingProdCount) {
+        saveCatalogsToCloud(targetUid, reconciled).catch(() => {});
+      }
+
       setCatalogs((prev) => {
         const cloudJson = JSON.stringify(reconciled);
         if (JSON.stringify(prev) === cloudJson) return prev;
@@ -894,6 +901,11 @@ export default function App() {
     );
     setCatalogs(updated);
     dispatchImmediateCatalogSync(updated);
+
+    const targetUid = isSeller && sellerUid ? sellerUid : PRIMARY_STORE_UID;
+    if (targetUid) {
+      saveCatalogsToCloud(targetUid, updated).catch(() => {});
+    }
   };
 
   // Catalog CRUD
