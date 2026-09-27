@@ -430,7 +430,9 @@ export default function App() {
 
       // Stricter filtering: sanitize incoming cloud catalogs with local deletedProductIds immediately
       const strictlyFilteredIncoming = filterOutDeletedProducts(incoming, localDeletedIds);
-      const reconciled = reconcileCatalogs(catalogs, strictlyFilteredIncoming, localDeletedIds);
+      const reconciled = isSeller
+        ? reconcileCatalogs(catalogs, strictlyFilteredIncoming, localDeletedIds)
+        : strictlyFilteredIncoming;
       const finalSanitized = filterOutDeletedProducts(reconciled, localDeletedIds);
 
       // If incoming cloud data still had products that the seller has deleted, purge the cloud immediately!

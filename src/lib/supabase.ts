@@ -159,6 +159,19 @@ export async function saveCatalogsToSupabase(
       console.warn('Supabase catalogs upsert error:', error);
       return false;
     }
+
+    // Clean up any deleted catalogs from database for this seller
+    const activeCatalogIds = catalogs.map((c) => c.id).filter(Boolean);
+    if (activeCatalogIds.length > 0) {
+      try {
+        await supabase
+          .from('catalogs')
+          .delete()
+          .eq('seller_id', sellerId)
+          .not('id', 'in', `(${activeCatalogIds.map((id) => `"${id}"`).join(',')})`);
+      } catch {}
+    }
+
     return true;
   } catch (err) {
     console.warn('Error saving catalogs to Supabase:', err);

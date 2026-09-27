@@ -6,8 +6,16 @@ import * as cheerio from 'cheerio';
 import dotenv from 'dotenv';
 import { Redis } from '@upstash/redis';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+let __filename = '';
+let __dirname = process.cwd();
+try {
+  if (typeof import.meta !== 'undefined' && import.meta.url) {
+    __filename = fileURLToPath(import.meta.url);
+    __dirname = path.dirname(__filename);
+  }
+} catch {
+  __dirname = process.cwd();
+}
 
 dotenv.config();
 
