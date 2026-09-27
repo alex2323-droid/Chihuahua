@@ -7,6 +7,7 @@ import { WhatsAppCartDrawer } from './components/WhatsAppCartDrawer';
 import { PrintableCatalog } from './components/PrintableCatalog';
 import { LoginModal } from './components/LoginModal';
 import { ProductDetailModal } from './components/ProductDetailModal';
+import { HermesShoppingAgent } from './components/HermesShoppingAgent';
 import { initialStoreSettings, initialCatalogs } from './data/initialData';
 import { Product, StoreSettings, Catalog, CartItem } from './types/catalog';
 import { isLogoUrl, optimizeProductImageSize } from './utils/imageUtils';
@@ -1767,6 +1768,17 @@ export default function App() {
         onOpenLegal={(tab) => handleOpenLegal(tab)}
         isOpenPreferencesExternal={isCookiePreferencesOpen}
         onClosePreferencesExternal={() => setIsCookiePreferencesOpen(false)}
+      />
+
+      {/* Hermes Shopping Assistant (AI Virtual Store Employee) */}
+      <HermesShoppingAgent
+        products={activeCatalog?.products || []}
+        storeSettings={settings}
+        onAddToCart={handleAddToCart}
+        onSelectProduct={(prod) => {
+          setSelectedDetailProduct(prod);
+          setIsDetailOpen(true);
+        }}
       />
 
       {/* Hidden Printable Catalog Component */}

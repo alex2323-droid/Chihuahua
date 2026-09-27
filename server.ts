@@ -1106,6 +1106,106 @@ Genera un texto atractivo de 2 a 4 viñetas o frases vendedoras.`;
   }
 });
 
+// API: Hermes Shopping Agent / Virtual Store Assistant
+app.post('/api/hermes-agent', async (req: Request, res: Response) => {
+  try {
+    const { message, history, products = [], storeSettings = {} } = req.body;
+
+    const storeName = storeSettings.storeName || 'Team Chihuahua';
+    const currency = storeSettings.currencySymbol || '$';
+    const announcement = storeSettings.cartAnnouncement || 'Envíos directos y pedidos por WhatsApp';
+
+    if (!message || typeof message !== 'string') {
+      res.status(400).json({ error: 'Mensaje requerido' });
+      return;
+    }
+
+    // Build catalog summary for grounding
+    const compactCatalog = (products || [])
+      .slice(0, 40)
+      .map((p: any) => `ID: ${p.id} | SKU: ${p.sku || 'N/A'} | Título: ${p.title} | Precio: ${currency}${p.price} | Cat: ${p.category} | Stock: ${p.inStock ? 'Disponible' : 'Agotado'}`)
+      .join('\n');
+
+    const systemPrompt = `Eres Hermes, el asistente de compras inteligente y empleado virtual de la tienda "${storeName}".
+Tu personalidad es amable, atenta, servicial, concisa y orientada a ayudar al cliente a encontrar lo que busca y completar su compra por WhatsApp.
+
+INFORMACIÓN DE LA TIENDA:
+- Nombre: ${storeName}
+- Moneda: ${currency}
+- Política/Anuncio: ${announcement}
+- Proceso de compra: El cliente selecciona sus productos, abre el carrito y envía el pedido directamente por WhatsApp para coordinar pago y entrega.
+
+CATÁLOGO ACTUAL DE PRODUCTOS:
+${compactCatalog || 'Catálogo general de productos.'}
+
+INSTRUCCIONES IMPORTANTES:
+1. Responde siempre en español, de forma clara, natural y con tono servicial.
+2. NUNCA inventes productos ni cambies sus precios reales. Basa tus recomendaciones ÚNICAMENTE en el catálogo provisto.
+3. Si recomiendas uno o más productos específicos del catálogo, añade al final de tu respuesta una etiqueta con el siguiente formato exacto:
+[RECOMMENDED_PRODUCTS: id1, id2]
+(máximo 3 productos relevantes).
+4. Si el usuario pregunta por envíos o cómo pagar, explícale brevemente el proceso amigable por WhatsApp.
+5. Mantén tus respuestas breves y legibles (máximo 3 a 5 oraciones).`;
+
+    const chatHistory = Array.isArray(history)
+      ? history.slice(-6).map((h: any) => `${h.sender === 'user' ? 'Cliente' : 'Hermes'}: ${h.text}`).join('\n')
+      : '';
+
+    const fullPrompt = `${systemPrompt}
+
+HISTORIAL DE CONVERSACIÓN RECIENTE:
+${chatHistory}
+
+Cliente dice: "${message}"
+Hermes responde:`;
+
+    const aiResponse = await callGeminiWithRetry({
+      contents: fullPrompt,
+    });
+
+    if (!aiResponse) {
+      // Rule-based fallback if API is not available
+      const cleanLower = message.toLowerCase();
+      const matched = (products || [])
+        .filter((p: any) => p.inStock && (cleanLower.includes((p.title || '').toLowerCase()) || cleanLower.includes((p.category || '').toLowerCase())))
+        .slice(0, 3);
+
+      const matchedIds = matched.map((p: any) => p.id);
+      const tag = matchedIds.length > 0 ? `\n\n[RECOMMENDED_PRODUCTS: ${matchedIds.join(', ')}]` : '';
+
+      res.json({
+        reply: `¡Hola! Soy Hermes, tu asesor en ${storeName}. 😊 ¿En qué puedo ayudarte hoy? Con gusto te muestro nuestras mejores opciones o resuelvo tus dudas sobre envíos.${tag}`,
+        recommendedProductIds: matchedIds,
+      });
+      return;
+    }
+
+    // Extract recommended product IDs tag if present
+    const tagMatch = aiResponse.match(/\[RECOMMENDED_PRODUCTS:\s*([^\]]+)\]/i);
+    let recommendedProductIds: string[] = [];
+    let cleanText = aiResponse;
+
+    if (tagMatch) {
+      recommendedProductIds = tagMatch[1]
+        .split(',')
+        .map((id: string) => id.trim())
+        .filter((id: string) => (products || []).some((p: any) => p.id === id));
+      cleanText = aiResponse.replace(/\[RECOMMENDED_PRODUCTS:\s*[^\]]+\]/i, '').trim();
+    }
+
+    res.json({
+      reply: cleanText,
+      recommendedProductIds,
+    });
+  } catch (error: any) {
+    console.error('Hermes Agent error:', error);
+    res.json({
+      reply: '¡Hola! Estoy listo para asesorarte con tus compras en la tienda. ¿Buscas algún producto o categoría en especial?',
+      recommendedProductIds: [],
+    });
+  }
+});
+
 // UPSTASH REDIS CACHE ENDPOINTS
 app.get('/api/cache/status', (_req: Request, res: Response) => {
   res.json({
