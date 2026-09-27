@@ -426,18 +426,27 @@ export default function App() {
     // Unified handler for incoming cloud catalogs from Supabase or Redis
     const applyIncomingCatalogs = (incoming: Catalog[]) => {
       if (!incoming || incoming.length === 0) return;
-      const reconciled = reconcileCatalogs(catalogs, incoming, getDeletedProductIds());
+      const localDeletedIds = getDeletedProductIds();
 
-      // If the seller has deleted products that are still in incoming cloud data, purge the cloud immediately!
+      // Stricter filtering: sanitize incoming cloud catalogs with local deletedProductIds immediately
+      const strictlyFilteredIncoming = filterOutDeletedProducts(incoming, localDeletedIds);
+      const reconciled = reconcileCatalogs(catalogs, strictlyFilteredIncoming, localDeletedIds);
+      const finalSanitized = filterOutDeletedProducts(reconciled, localDeletedIds);
+
+      // If incoming cloud data still had products that the seller has deleted, purge the cloud immediately!
       const incomingProdCount = incoming.reduce((acc, c) => acc + (c.products?.length || 0), 0);
-      const reconciledProdCount = reconciled.reduce((acc, c) => acc + (c.products?.length || 0), 0);
-      if (isSeller && targetUid && reconciledProdCount < incomingProdCount) {
-        saveCatalogsToCloud(targetUid, reconciled).catch(() => {});
+      const sanitizedProdCount = finalSanitized.reduce((acc, c) => acc + (c.products?.length || 0), 0);
+      if (isSeller && targetUid && sanitizedProdCount < incomingProdCount) {
+        saveCatalogsToCloud(targetUid, finalSanitized).catch(() => {});
       }
 
       setCatalogs((prev) => {
-        const cloudJson = JSON.stringify(reconciled);
-        if (JSON.stringify(prev) === cloudJson) return prev;
+        // Stricter filtering mechanism: explicitly remove products from both prev state and incoming state
+        const cleanPrev = filterOutDeletedProducts(prev, localDeletedIds);
+        const cleanIncoming = filterOutDeletedProducts(finalSanitized, localDeletedIds);
+
+        const cloudJson = JSON.stringify(cleanIncoming);
+        if (JSON.stringify(cleanPrev) === cloudJson) return cleanPrev;
 
         isRemoteCatalogUpdateRef.current = true;
         lastSavedCatalogsRef.current = cloudJson;
@@ -445,15 +454,15 @@ export default function App() {
         try {
           localStorage.setItem('catalogcraft_catalogs', cloudJson);
         } catch {}
-        setStoredItem('cached_catalogs_latest', reconciled).catch(() => {});
-        setStoredItem(`cached_catalogs_${targetUid}`, reconciled).catch(() => {});
+        setStoredItem('cached_catalogs_latest', cleanIncoming).catch(() => {});
+        setStoredItem(`cached_catalogs_${targetUid}`, cleanIncoming).catch(() => {});
 
-        return reconciled;
+        return cleanIncoming;
       });
 
       setActiveCatalogId((prev) => {
-        if (!prev || !reconciled.some((c) => c.id === prev)) {
-          return reconciled[0]?.id || 'cat_principal';
+        if (!prev || !finalSanitized.some((c) => c.id === prev)) {
+          return finalSanitized[0]?.id || 'cat_principal';
         }
         return prev;
       });
@@ -1026,8 +1035,13 @@ export default function App() {
     }
   };
 
-  // Filter products strictly deduplicated by product ID
-  const rawCatalogProducts = activeCatalog?.products || [];
+  // Filter products strictly deduplicated and removing any deleted product IDs before rendering
+  const currentDeletedIds = getDeletedProductIds();
+  const rawCatalogProducts = (activeCatalog?.products || []).filter((p) => {
+    if (!p || !p.id) return false;
+    const pid = String(p.id).trim();
+    return !currentDeletedIds.has(pid) && !currentDeletedIds.has(String(p.id));
+  });
   const seenCatalogProductIds = new Set<string>();
   const uniqueCatalogProducts = rawCatalogProducts.filter((p) => {
     if (!p || !p.id || seenCatalogProductIds.has(p.id)) return false;
@@ -1241,7 +1255,17 @@ export default function App() {
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
-                {cat.title} ({cat.products.length})
+                {cat.title} (
+                  {
+                    (cat.products || []).filter(
+                      (p) =>
+                        p &&
+                        p.id &&
+                        !currentDeletedIds.has(p.id) &&
+                        !currentDeletedIds.has(String(p.id).trim())
+                    ).length
+                  }
+                )
               </button>
             ))}
             {!effectiveCustomerMode && (

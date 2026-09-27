@@ -109,4 +109,39 @@ describe('syncUtils - Sincronización de Catálogo y Eliminación de Productos',
     expect(reassembled.products).toHaveLength(6);
     expect(reassembled.products.map((p) => p.id)).not.toContain('p_eliminado');
   });
+
+  it('reconcileCatalogs debe respetar estrictamente deletedProductIds eliminando productos que aún existen en la nube', () => {
+    // La nube todavía tiene los productos 1 y 2
+    const cloudCatalog: Catalog = {
+      ...baseLocalCatalog,
+      products: [
+        createProduct('prod_1', 'Producto 1'),
+        createProduct('prod_2', 'Producto 2'),
+        createProduct('prod_3', 'Producto 3'),
+        createProduct('prod_4', 'Producto 4'),
+      ],
+    };
+
+    // El vendedor eliminó prod_1 y prod_2 localmente
+    const deletedIds = new Set(['prod_1', ' prod_2 ']); // Con espacio en blanco
+    const reconciled = reconcileCatalogs([], [cloudCatalog], deletedIds);
+
+    expect(reconciled[0].products).toHaveLength(2);
+    expect(reconciled[0].products.map((p) => p.id)).toEqual(['prod_3', 'prod_4']);
+  });
+
+  it('reconcileCatalogs debe aceptar un array de strings en deletedIds y filtrar correctamente', () => {
+    const cloudCatalog: Catalog = {
+      ...baseLocalCatalog,
+      products: [
+        createProduct('prod_A', 'Prod A'),
+        createProduct('prod_B', 'Prod B'),
+        createProduct('prod_C', 'Prod C'),
+      ],
+    };
+
+    const reconciled = reconcileCatalogs([], [cloudCatalog], ['prod_A']);
+    expect(reconciled[0].products).toHaveLength(2);
+    expect(reconciled[0].products.map((p) => p.id)).toEqual(['prod_B', 'prod_C']);
+  });
 });
