@@ -15,9 +15,57 @@ export function filterOutDeletedProducts(catalogs: Catalog[], deletedIds: Set<st
 }
 
 /**
- * Reconcilia los catálogos locales y los recibidos de la nube.
- * Da prioridad total y autoritativa a la nube para evitar "resucitar" productos eliminados por el vendedor.
+ * Reensambla de forma segura los fragmentos (chunks) de un catálogo fraccionado en Firestore.
+ * Ignora estrictamente fragmentos huérfanos con chunkIndex >= chunkCount para evitar
+ * resucitar productos que ya fueron eliminados.
  */
+export function reassembleChunkedCatalog(
+  rawCat: any,
+  chunkDocs: any[]
+): Catalog {
+  if (!rawCat) {
+    return {
+      id: 'cat_principal',
+      title: 'Catálogo',
+      description: '',
+      createdAt: new Date().toISOString(),
+      products: [],
+    };
+  }
+
+  if (!rawCat.isChunked || !rawCat.chunkCount || rawCat.chunkCount <= 0) {
+    return rehydrateCatalog(rawCat as Catalog);
+  }
+
+  const maxValidChunks = rawCat.chunkCount;
+
+  // Filtrar solo los fragmentos autorizados dentro del rango oficial [0, chunkCount - 1]
+  const validChunks = (chunkDocs || []).filter(
+    (cd) => typeof cd.chunkIndex === 'number' && cd.chunkIndex >= 0 && cd.chunkIndex < maxValidChunks
+  );
+
+  validChunks.sort((a, b) => (a.chunkIndex ?? 0) - (b.chunkIndex ?? 0));
+
+  const allProducts: Product[] = [];
+  const seenIds = new Set<string>();
+
+  for (const cd of validChunks) {
+    if (Array.isArray(cd.products)) {
+      for (const p of cd.products) {
+        if (p && p.id && !seenIds.has(p.id)) {
+          seenIds.add(p.id);
+          allProducts.push(rehydrateProduct(p));
+        }
+      }
+    }
+  }
+
+  return rehydrateCatalog({
+    ...rawCat,
+    products: allProducts,
+  });
+}
+
 export function reconcileCatalogs(
   localCatalogs: Catalog[],
   cloudCatalogs: Catalog[],

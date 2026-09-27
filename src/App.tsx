@@ -746,12 +746,15 @@ export default function App() {
     const targetUid = isSeller && sellerUid ? sellerUid : PRIMARY_STORE_UID;
     setIsSyncing(true);
     try {
+      if (isSupabaseConfigured) {
+        await saveCatalogsToSupabase(targetUid, catalogs);
+      }
       await syncCatalogNowToFirestore(targetUid, catalogs);
       await saveStoreSettingsToFirestore(targetUid, settings);
       setSyncToastMessage('¡Catálogo sincronizado exitosamente con la nube en todos los dispositivos!');
       setTimeout(() => setSyncToastMessage(null), 4000);
     } catch (err: any) {
-      setSyncToastMessage('Guardado en almacenamiento local.');
+      setSyncToastMessage('Guardado en almacenamiento local y Redis.');
       setTimeout(() => setSyncToastMessage(null), 3000);
     } finally {
       setIsSyncing(false);

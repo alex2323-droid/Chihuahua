@@ -635,14 +635,14 @@ export function partitionProductsIntoChunks(products: any[], maxChunkBytes = 550
 }
 
 /**
- * Commits a Firestore WriteBatch with a strict timeout.
- * Prevents the application from freezing when Firestore quota is exhausted (which causes internal SDK infinite backoff).
+ * Commits a Firestore WriteBatch with a protective timeout.
+ * Prevents the application from freezing on slow network or infinite backoff.
  */
-async function commitBatchWithTimeout(batch: any, timeoutMs = 3500): Promise<void> {
+async function commitBatchWithTimeout(batch: any, timeoutMs = 15000): Promise<void> {
   let timer: any;
   const timeoutPromise = new Promise((_, reject) => {
     timer = setTimeout(() => {
-      reject(new Error('Firestore write quota limit reached or connection timed out'));
+      reject(new Error('Firestore write connection timed out'));
     }, timeoutMs);
   });
 
@@ -926,11 +926,21 @@ export function subscribeToSellerCatalogs(
                 );
               }
               const chunkDocs = chunkSnap.docs.map((cd) => cd.data());
-              chunkDocs.sort((a, b) => (a.chunkIndex ?? 0) - (b.chunkIndex ?? 0));
+              const maxValidChunks = rawCat.chunkCount || 0;
+              const validChunks = chunkDocs.filter(
+                (cd) => typeof cd.chunkIndex === 'number' && cd.chunkIndex >= 0 && cd.chunkIndex < maxValidChunks
+              );
+              validChunks.sort((a, b) => (a.chunkIndex ?? 0) - (b.chunkIndex ?? 0));
               const allProducts: any[] = [];
-              for (const cd of chunkDocs) {
+              const seenIds = new Set<string>();
+              for (const cd of validChunks) {
                 if (Array.isArray(cd.products)) {
-                  allProducts.push(...cd.products);
+                  for (const p of cd.products) {
+                    if (p && p.id && !seenIds.has(p.id)) {
+                      seenIds.add(p.id);
+                      allProducts.push(rehydrateProduct(p));
+                    }
+                  }
                 }
               }
 
@@ -963,12 +973,10 @@ export function subscribeToSellerCatalogs(
         const catalogs = await Promise.all(catalogPromises);
         catalogs.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
         
-        // Cache to IndexedDB for offline instant load
+        // Cache to IndexedDB for offline instant load (passive snapshot reads never overwrite Redis cache)
         if (catalogs.length > 0 && !isUnsubscribed) {
           setStoredItem(`cached_catalogs_${sellerId}`, catalogs).catch(() => {});
           setStoredItem('cached_catalogs_latest', catalogs).catch(() => {});
-          // Update Upstash Redis cache
-          redisClient.set(`catalog:${sellerId}`, JSON.stringify(catalogs), { ex: REDIS_CACHE_TTL }).catch(() => {});
         }
 
         if (!isUnsubscribed) {

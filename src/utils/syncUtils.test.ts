@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { reconcileCatalogs, filterOutDeletedProducts } from './syncUtils';
+import { reconcileCatalogs, filterOutDeletedProducts, reassembleChunkedCatalog } from './syncUtils';
 import { Catalog, Product } from '../types/catalog';
 
 describe('syncUtils - Sincronización de Catálogo y Eliminación de Productos', () => {
@@ -79,5 +79,34 @@ describe('syncUtils - Sincronización de Catálogo y Eliminación de Productos',
     expect(filtered[0].products).toHaveLength(12);
     expect(filtered[0].products.find((p) => p.id === 'prod_1')).toBeUndefined();
     expect(filtered[0].products.find((p) => p.id === 'prod_2')).toBeUndefined();
+  });
+
+  it('debe descartar fragmentos huérfanos (stale chunks) cuyo chunkIndex >= chunkCount', () => {
+    // El catálogo oficial indica que solo tiene 6 chunks
+    const rawCat = {
+      id: 'cat_principal',
+      title: 'Colección Destacada 2026',
+      description: 'Catálogo',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      isChunked: true,
+      chunkCount: 6,
+      products: [],
+    };
+
+    // La subcolección contiene 7 chunks (el chunk_6 quedó de un guardado anterior con productos eliminados)
+    const chunkDocs = [
+      { chunkIndex: 0, products: [createProduct('p1', 'Prod 1')] },
+      { chunkIndex: 1, products: [createProduct('p2', 'Prod 2')] },
+      { chunkIndex: 2, products: [createProduct('p3', 'Prod 3')] },
+      { chunkIndex: 3, products: [createProduct('p4', 'Prod 4')] },
+      { chunkIndex: 4, products: [createProduct('p5', 'Prod 5')] },
+      { chunkIndex: 5, products: [createProduct('p6', 'Prod 6')] },
+      { chunkIndex: 6, products: [createProduct('p_eliminado', 'Producto que fue eliminado')] }, // Stale chunk!
+    ];
+
+    const reassembled = reassembleChunkedCatalog(rawCat as any, chunkDocs);
+
+    expect(reassembled.products).toHaveLength(6);
+    expect(reassembled.products.map((p) => p.id)).not.toContain('p_eliminado');
   });
 });
