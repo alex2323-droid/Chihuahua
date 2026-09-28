@@ -185,6 +185,7 @@ export async function fetchSettingsFromSupabase(sellerId: string): Promise<Store
       instagramHandle: data.instagram_handle || '',
       currencySymbol: data.currency_symbol || '$',
       themeColor: data.theme_color || 'emerald',
+      themeMode: data.theme_mode || 'light',
       catalogLayout: data.catalog_layout || 'grid-3',
       cartAnnouncement: data.cart_announcement || '',
     };
@@ -215,6 +216,7 @@ export async function saveSettingsToSupabase(
         instagram_handle: settings.instagramHandle,
         currency_symbol: settings.currencySymbol,
         theme_color: settings.themeColor,
+        theme_mode: settings.themeMode || 'light',
         catalog_layout: settings.catalogLayout,
         cart_announcement: settings.cartAnnouncement,
         updated_at: new Date().toISOString(),

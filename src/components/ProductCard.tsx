@@ -135,12 +135,20 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
     violet: 'bg-violet-600 hover:bg-violet-700 text-white',
   }[settings.themeColor || 'emerald'];
 
+  const isDark = settings.themeMode === 'dark';
+
   if (layout === 'list') {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all duration-200 p-4 flex flex-col sm:flex-row gap-4 items-center print-card">
+      <div className={`rounded-2xl border transition-all duration-200 p-4 flex flex-col sm:flex-row gap-4 items-center print-card ${
+        isDark
+          ? 'bg-slate-900 border-slate-800 text-slate-100 shadow-md hover:border-slate-700'
+          : 'bg-white border-slate-200/90 text-slate-900 shadow-2xs hover:shadow-md'
+      }`}>
         <div
           onClick={() => onViewDetail && onViewDetail(product)}
-          className="w-full sm:w-32 h-32 shrink-0 bg-slate-50 rounded-xl overflow-hidden relative border border-slate-100 cursor-pointer group/img"
+          className={`w-full sm:w-32 h-32 shrink-0 rounded-xl overflow-hidden relative border cursor-pointer group/img ${
+            isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-100'
+          }`}
         >
           {!imgError && imgSrc && imgSrc.trim() !== '' ? (
             <img
@@ -150,7 +158,9 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
               className="w-full h-full object-cover group-hover/img:scale-105 transition-all duration-300"
             />
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400 text-xs text-center p-2">
+            <div className={`w-full h-full flex flex-col items-center justify-center text-xs text-center p-2 ${
+              isDark ? 'bg-slate-950 text-slate-500' : 'bg-slate-100 text-slate-400'
+            }`}>
               <Tag className="w-6 h-6 mb-1 opacity-40" />
               <span>Sin imagen</span>
             </div>
@@ -166,49 +176,63 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
           onClick={() => onViewDetail && onViewDetail(product)}
           className="flex-1 min-w-0 cursor-pointer"
         >
-          <div className="flex items-center justify-between gap-2 text-xs text-slate-500 mb-1">
+          <div className="flex items-center justify-between gap-2 text-xs mb-1">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="font-semibold text-slate-700 uppercase tracking-wider text-[10px]">
+              <span className={`font-semibold uppercase tracking-wider text-[10px] ${
+                isDark ? 'text-slate-300' : 'text-slate-700'
+              }`}>
                 {product.category}
               </span>
-              <span aria-hidden="true" className="text-slate-300">·</span>
-              <span className="truncate">{product.brand}</span>
+              <span aria-hidden="true" className={isDark ? 'text-slate-600' : 'text-slate-300'}>·</span>
+              <span className={`truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{product.brand}</span>
             </div>
             {product.sku && (
-              <span className="font-mono text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100/80 shrink-0">
+              <span className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${
+                isDark
+                  ? 'text-emerald-400 bg-emerald-950/60 border-emerald-800/80'
+                  : 'text-emerald-700 bg-emerald-50 border-emerald-100/80'
+              }`}>
                 {product.sku}
               </span>
             )}
           </div>
 
-          <h3 className="font-semibold text-slate-900 text-base leading-snug truncate mb-1 hover:text-emerald-700 transition-colors">
+          <h3 className={`font-semibold text-base leading-snug truncate mb-1 transition-colors ${
+            isDark ? 'text-white hover:text-emerald-400' : 'text-slate-900 hover:text-emerald-700'
+          }`}>
             {product.title}
           </h3>
 
           {product.sizes && (
-            <div className="inline-flex items-center gap-1 bg-purple-50 text-purple-700 border border-purple-200/80 px-2 py-0.5 rounded-md text-[11px] font-semibold mb-1">
-              <Ruler className="w-3 h-3 text-purple-600" />
+            <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold mb-1 border ${
+              isDark
+                ? 'bg-purple-950/60 text-purple-300 border-purple-800/80'
+                : 'bg-purple-50 text-purple-700 border-purple-200/80'
+            }`}>
+              <Ruler className="w-3 h-3 text-purple-400" />
               <span>Tallas: {product.sizes}</span>
             </div>
           )}
 
-          <p className="text-xs text-slate-600 mt-0.5 line-clamp-2 leading-relaxed">
+          <p className={`text-xs mt-0.5 line-clamp-2 leading-relaxed ${
+            isDark ? 'text-slate-400' : 'text-slate-600'
+          }`}>
             {product.description}
           </p>
 
           <div className="mt-2 flex items-baseline gap-2 font-mono tabular-nums">
-            <span className="text-lg font-bold text-slate-900">
+            <span className={`text-lg font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
               {product.currency}
               {product.price.toFixed(2)}
             </span>
             {product.originalPrice && (
-              <span className="text-xs text-slate-400 line-through">
+              <span className={`text-xs line-through ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                 {product.currency}
                 {product.originalPrice.toFixed(2)}
               </span>
             )}
             {discountPercent && (
-              <span className="text-[11px] font-semibold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-md">
+              <span className="text-[11px] font-semibold text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded-md">
                 -{discountPercent}%
               </span>
             )}
@@ -231,23 +255,29 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
                 <button
                   onClick={handleManualReExtract}
                   disabled={isRefreshing}
-                  className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                  className={`p-2 rounded-lg transition-colors ${
+                    isDark ? 'text-slate-400 hover:text-emerald-400 hover:bg-slate-800' : 'text-slate-500 hover:text-emerald-600 hover:bg-emerald-50'
+                  }`}
                   title="Re-extraer foto original"
                 >
-                  <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-emerald-600' : ''}`} />
+                  <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-emerald-500' : ''}`} />
                 </button>
               )}
               <button
                 onClick={copyWhatsAppFormat}
-                className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                className={`p-2 rounded-lg transition-colors ${
+                  isDark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
                 title="Copiar formato WhatsApp"
               >
-                {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
               </button>
               {onEdit && (
                 <button
                   onClick={() => onEdit(product)}
-                  className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                  className={`p-2 rounded-lg transition-colors ${
+                    isDark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
                   title="Editar producto"
                 >
                   <Edit2 className="w-4 h-4" />
@@ -256,7 +286,9 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
               {onDelete && (
                 <button
                   onClick={() => onDelete(product.id)}
-                  className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
+                  className={`p-2 rounded-lg transition-colors ${
+                    isDark ? 'text-rose-400 hover:text-rose-300 hover:bg-rose-950/50' : 'text-rose-500 hover:text-rose-700 hover:bg-rose-50'
+                  }`}
                   title="Eliminar producto"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -272,11 +304,17 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
   // Gallery Minimalist Layout (Large Images & Uncut Complete Descriptions)
   if (layout === 'gallery') {
     return (
-      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col group print-card">
+      <div className={`rounded-3xl border transition-all duration-300 overflow-hidden flex flex-col group print-card ${
+        isDark
+          ? 'bg-slate-900 border-slate-800 text-slate-100 shadow-xl hover:border-slate-700'
+          : 'bg-white border-slate-200/90 text-slate-900 shadow-sm hover:shadow-xl'
+      }`}>
         {/* Large Hero Image Container */}
         <div
           onClick={() => onViewDetail && onViewDetail(product)}
-          className="relative aspect-4/3 sm:aspect-16/10 w-full bg-slate-100 overflow-hidden cursor-pointer"
+          className={`relative aspect-4/3 sm:aspect-16/10 w-full overflow-hidden cursor-pointer ${
+            isDark ? 'bg-slate-950' : 'bg-slate-100'
+          }`}
         >
           {!imgError && imgSrc && imgSrc.trim() !== '' ? (
             <img
@@ -286,7 +324,9 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
               className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500 ease-out"
             />
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400 p-8 text-center">
+            <div className={`w-full h-full flex flex-col items-center justify-center p-8 text-center ${
+              isDark ? 'bg-slate-950 text-slate-500' : 'bg-slate-100 text-slate-400'
+            }`}>
               <Tag className="w-12 h-12 mb-2 opacity-40" />
               <span className="text-sm font-medium">Imagen no disponible</span>
             </div>
@@ -295,7 +335,7 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
           {/* Minimalist Floating Badges */}
           <div className="absolute top-3.5 left-3.5 flex flex-wrap gap-1.5 items-center z-10">
             {product.category && (
-              <span className="bg-slate-900/80 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm">
+              <span className="bg-slate-900/90 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm border border-slate-700/50">
                 {product.category}
               </span>
             )}
@@ -310,7 +350,7 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
               </span>
             )}
             {product.images && product.images.length > 1 && (
-              <span className="bg-white/90 backdrop-blur-md text-slate-800 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm">
+              <span className="bg-slate-900/80 backdrop-blur-md text-slate-100 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm border border-slate-700">
                 📷 {product.images.length} fotos
               </span>
             )}
@@ -325,10 +365,10 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
               <button
                 onClick={handleManualReExtract}
                 disabled={isRefreshing}
-                className="p-2 bg-white/90 hover:bg-white text-slate-700 hover:text-emerald-700 rounded-xl backdrop-blur-md transition-all shadow-sm"
+                className="p-2 bg-slate-900/80 hover:bg-slate-900 text-slate-200 hover:text-emerald-400 rounded-xl backdrop-blur-md transition-all shadow-sm border border-slate-700"
                 title="Actualizar foto desde la URL"
               >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-emerald-600' : ''}`} />
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-emerald-400' : ''}`} />
               </button>
             )}
             {product.sourceUrl && (
@@ -336,7 +376,7 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
                 href={product.sourceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 bg-white/90 hover:bg-white text-slate-700 rounded-xl backdrop-blur-md transition-all shadow-sm"
+                className="p-2 bg-slate-900/80 hover:bg-slate-900 text-slate-200 rounded-xl backdrop-blur-md transition-all shadow-sm border border-slate-700"
                 title="Ver enlace original"
               >
                 <ExternalLink className="w-4 h-4" />
@@ -352,48 +392,62 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
             className="cursor-pointer"
           >
             {/* Top metadata */}
-            <div className="flex items-center justify-between gap-2 text-xs text-slate-500 mb-2">
-              <span className="font-semibold text-slate-600 tracking-wide">
+            <div className="flex items-center justify-between gap-2 text-xs mb-2">
+              <span className={`font-semibold tracking-wide ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                 {product.brand || 'Colección Oficial'}
               </span>
               {product.sku && (
-                <span className="font-mono text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100">
+                <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded-lg border ${
+                  isDark
+                    ? 'text-emerald-400 bg-emerald-950/60 border-emerald-800'
+                    : 'text-emerald-700 bg-emerald-50 border-emerald-100'
+                }`}>
                   REF: {product.sku}
                 </span>
               )}
             </div>
 
             {/* Title (Full text, no line clamp) */}
-            <h3 className="font-display font-bold text-slate-900 text-lg sm:text-xl leading-snug group-hover:text-emerald-700 transition-colors mb-2.5">
+            <h3 className={`font-display font-bold text-lg sm:text-xl leading-snug transition-colors mb-2.5 ${
+              isDark ? 'text-white group-hover:text-emerald-400' : 'text-slate-900 group-hover:text-emerald-700'
+            }`}>
               {product.title}
             </h3>
 
             {/* Sizes tag */}
             {product.sizes && (
-              <div className="inline-flex items-center gap-1.5 bg-purple-50 text-purple-700 border border-purple-200/80 px-2.5 py-1 rounded-lg text-xs font-semibold mb-3">
-                <Ruler className="w-3.5 h-3.5 text-purple-600" />
+              <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold mb-3 border ${
+                isDark
+                  ? 'bg-purple-950/60 text-purple-300 border-purple-800'
+                  : 'bg-purple-50 text-purple-700 border-purple-200/80'
+              }`}>
+                <Ruler className="w-3.5 h-3.5 text-purple-400" />
                 <span>Tallas disponibles: {product.sizes}</span>
               </div>
             )}
 
             {/* Full Uncut Description (Sin cortes ni line-clamp) */}
             {product.description && (
-              <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-line mb-5 font-normal">
+              <div className={`text-sm leading-relaxed whitespace-pre-line mb-5 font-normal ${
+                isDark ? 'text-slate-300' : 'text-slate-600'
+              }`}>
                 {product.description}
               </div>
             )}
           </div>
 
           {/* Pricing & Minimalist Call to Action */}
-          <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className={`pt-4 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+            isDark ? 'border-slate-800' : 'border-slate-100'
+          }`}>
             <div>
               {product.sizeVariants && product.sizeVariants.length > 0 ? (
                 <div>
-                  <span className="text-[10px] uppercase tracking-wider font-extrabold text-purple-700 block mb-0.5">
+                  <span className="text-[10px] uppercase tracking-wider font-extrabold text-purple-400 block mb-0.5">
                     Precios desde:
                   </span>
                   <div className="flex items-baseline gap-1.5 font-mono">
-                    <span className="text-2xl font-extrabold text-slate-900">
+                    <span className={`text-2xl font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>
                       {product.currency}
                       {Math.min(...product.sizeVariants.map((v) => v.price)).toFixed(2)}
                     </span>
@@ -401,12 +455,12 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
                 </div>
               ) : (
                 <div className="flex flex-wrap items-baseline gap-2 font-mono">
-                  <span className="text-2xl font-extrabold text-slate-900">
+                  <span className={`text-2xl font-extrabold ${isDark ? 'text-white' : 'text-slate-900'}`}>
                     {product.currency}
                     {product.price.toFixed(2)}
                   </span>
                   {product.originalPrice && (
-                    <span className="text-sm text-slate-400 line-through">
+                    <span className={`text-sm line-through ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                       {product.currency}
                       {product.originalPrice.toFixed(2)}
                     </span>
@@ -429,15 +483,19 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
                 <>
                   <button
                     onClick={copyWhatsAppFormat}
-                    className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
+                    className={`p-2 rounded-xl transition-colors ${
+                      isDark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
                     title="Copiar texto para WhatsApp"
                   >
-                    {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                    {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                   </button>
                   {onEdit && (
                     <button
                       onClick={() => onEdit(product)}
-                      className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
+                      className={`p-2 rounded-xl transition-colors ${
+                        isDark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                      }`}
                       title="Editar"
                     >
                       <Edit2 className="w-4 h-4" />
@@ -446,7 +504,9 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
                   {onDelete && (
                     <button
                       onClick={() => onDelete(product.id)}
-                      className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors"
+                      className={`p-2 rounded-xl transition-colors ${
+                        isDark ? 'text-rose-400 hover:text-rose-300 hover:bg-rose-950/50' : 'text-rose-500 hover:text-rose-700 hover:bg-rose-50'
+                      }`}
                       title="Eliminar"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -463,11 +523,17 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
 
   // Grid Card Layout (Default)
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col group print-card">
+    <div className={`rounded-2xl border transition-all duration-200 overflow-hidden flex flex-col group print-card ${
+      isDark
+        ? 'bg-slate-900 border-slate-800 text-slate-100 shadow-md hover:border-slate-700'
+        : 'bg-white border-slate-200/90 text-slate-900 shadow-2xs hover:shadow-md'
+    }`}>
       {/* Product Image Container */}
       <div
         onClick={() => onViewDetail && onViewDetail(product)}
-        className="relative aspect-4/3 bg-slate-50 overflow-hidden border-b border-slate-100 cursor-pointer"
+        className={`relative aspect-4/3 overflow-hidden border-b cursor-pointer ${
+          isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-100'
+        }`}
       >
         {!imgError && imgSrc && imgSrc.trim() !== '' ? (
           <img
@@ -477,7 +543,9 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
             className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300"
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400 p-4 text-center">
+          <div className={`w-full h-full flex flex-col items-center justify-center p-4 text-center ${
+            isDark ? 'bg-slate-950 text-slate-500' : 'bg-slate-100 text-slate-400'
+          }`}>
             <Tag className="w-8 h-8 mb-1 opacity-40" />
             <span className="text-xs">Imagen no disponible</span>
           </div>
@@ -486,7 +554,7 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
         {/* Top Badges */}
         <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1.5 items-center">
           {product.badge && (
-            <span className="bg-slate-900/90 backdrop-blur-xs text-white text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider shadow-2xs">
+            <span className="bg-slate-900/90 backdrop-blur-xs text-white text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider shadow-2xs border border-slate-700/50">
               {product.badge}
             </span>
           )}
@@ -496,7 +564,7 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
             </span>
           )}
           {product.images && product.images.length > 1 && (
-            <span className="bg-blue-600/90 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-2xs">
+            <span className="bg-slate-900/90 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-2xs border border-slate-700">
               📷 {product.images.length} fotos
             </span>
           )}
@@ -516,10 +584,14 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
             <button
               onClick={handleManualReExtract}
               disabled={isRefreshing}
-              className="p-1.5 bg-white/90 hover:bg-white text-slate-700 hover:text-emerald-700 rounded-lg backdrop-blur-xs transition-colors shadow-2xs"
+              className={`p-1.5 rounded-lg backdrop-blur-xs transition-colors shadow-2xs ${
+                isDark
+                  ? 'bg-slate-900/90 hover:bg-slate-900 text-slate-300 hover:text-emerald-400 border border-slate-700'
+                  : 'bg-white/90 hover:bg-white text-slate-700 hover:text-emerald-700'
+              }`}
               title="Actualizar foto desde la URL"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-emerald-600' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-emerald-500' : ''}`} />
             </button>
           )}
           {product.sourceUrl && (
@@ -527,7 +599,11 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
               href={product.sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-1.5 bg-white/90 hover:bg-white text-slate-700 rounded-lg backdrop-blur-xs transition-colors shadow-2xs"
+              className={`p-1.5 rounded-lg backdrop-blur-xs transition-colors shadow-2xs ${
+                isDark
+                  ? 'bg-slate-900/90 hover:bg-slate-900 text-slate-300 border border-slate-700'
+                  : 'bg-white/90 hover:bg-white text-slate-700'
+              }`}
               title="Ver en la página original"
             >
               <ExternalLink className="w-3.5 h-3.5" />
@@ -543,49 +619,65 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
           className="cursor-pointer"
         >
           {/* Metadata kicker */}
-          <div className="flex items-center justify-between gap-1.5 text-xs text-slate-500 mb-1">
+          <div className="flex items-center justify-between gap-1.5 text-xs mb-1">
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">
+              <span className={`font-bold uppercase tracking-wider text-[10px] ${
+                isDark ? 'text-slate-300' : 'text-slate-700'
+              }`}>
                 {product.category}
               </span>
-              <span aria-hidden="true" className="text-slate-300">·</span>
-              <span className="text-[11px] text-slate-500 truncate">{product.brand}</span>
+              <span aria-hidden="true" className={isDark ? 'text-slate-600' : 'text-slate-300'}>·</span>
+              <span className={`text-[11px] truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{product.brand}</span>
             </div>
             {product.sku && (
-              <span className="font-mono text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-100/80 shrink-0">
+              <span className={`font-mono text-[10px] font-bold px-1.5 py-0.2 rounded border shrink-0 ${
+                isDark
+                  ? 'text-emerald-400 bg-emerald-950/60 border-emerald-800'
+                  : 'text-emerald-700 bg-emerald-50 border-emerald-100/80'
+              }`}>
                 {product.sku}
               </span>
             )}
           </div>
 
-          <h3 className="font-semibold text-slate-900 text-sm leading-snug line-clamp-2 mb-1 group-hover:text-emerald-700 transition-colors">
+          <h3 className={`font-semibold text-sm leading-snug line-clamp-2 mb-1 transition-colors ${
+            isDark ? 'text-white group-hover:text-emerald-400' : 'text-slate-900 group-hover:text-emerald-700'
+          }`}>
             {product.title}
           </h3>
 
           {/* Sizes / Tallas pill */}
           {product.sizes && (
-            <div className="inline-flex items-center gap-1 bg-purple-50 text-purple-700 border border-purple-200/80 px-2 py-0.5 rounded-md text-[11px] font-semibold mb-2">
-              <Ruler className="w-3 h-3 text-purple-600" />
+            <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold mb-2 border ${
+              isDark
+                ? 'bg-purple-950/60 text-purple-300 border-purple-800'
+                : 'bg-purple-50 text-purple-700 border-purple-200/80'
+            }`}>
+              <Ruler className="w-3 h-3 text-purple-400" />
               <span>Tallas: {product.sizes}</span>
             </div>
           )}
 
-          <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed mb-3">
+          <p className={`text-xs line-clamp-3 leading-relaxed mb-3 ${
+            isDark ? 'text-slate-400' : 'text-slate-500'
+          }`}>
             {product.description}
           </p>
         </div>
 
         <div>
           {/* Price & Action Row */}
-          <div className="pt-3 border-t border-slate-100 flex flex-col xs:flex-row xs:items-center justify-between gap-2.5">
+          <div className={`pt-3 border-t flex flex-col xs:flex-row xs:items-center justify-between gap-2.5 ${
+            isDark ? 'border-slate-800' : 'border-slate-100'
+          }`}>
             <div className="min-w-0">
               {product.sizeVariants && product.sizeVariants.length > 0 ? (
                 <div>
-                  <span className="text-[9px] uppercase tracking-wider font-extrabold text-purple-700 block leading-none mb-0.5">
+                  <span className="text-[9px] uppercase tracking-wider font-extrabold text-purple-400 block leading-none mb-0.5">
                     Desde:
                   </span>
                   <div className="flex items-baseline gap-1 font-mono tabular-nums">
-                    <span className="text-sm sm:text-base font-bold text-slate-900">
+                    <span className={`text-sm sm:text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
                       {product.currency}
                       {Math.min(...product.sizeVariants.map((v) => v.price)).toFixed(2)}
                     </span>
@@ -593,12 +685,12 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
                 </div>
               ) : (
                 <div className="flex flex-wrap items-baseline gap-1 font-mono tabular-nums">
-                  <span className="text-sm sm:text-base font-bold text-slate-900">
+                  <span className={`text-sm sm:text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
                     {product.currency}
                     {product.price.toFixed(2)}
                   </span>
                   {product.originalPrice && (
-                    <span className="text-[10px] sm:text-xs text-slate-400 line-through">
+                    <span className={`text-[10px] sm:text-xs line-through ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                       {product.currency}
                       {product.originalPrice.toFixed(2)}
                     </span>
@@ -621,15 +713,19 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
                 <>
                   <button
                     onClick={copyWhatsAppFormat}
-                    className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                    className={`p-1.5 rounded-lg transition-colors ${
+                      isDark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
                     title="Copiar texto para WhatsApp"
                   >
-                    {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                    {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                   </button>
                   {onEdit && (
                     <button
                       onClick={() => onEdit(product)}
-                      className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                      className={`p-1.5 rounded-lg transition-colors ${
+                        isDark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                      }`}
                       title="Editar"
                     >
                       <Edit2 className="w-4 h-4" />
@@ -638,7 +734,9 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
                   {onDelete && (
                     <button
                       onClick={() => onDelete(product.id)}
-                      className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
+                      className={`p-1.5 rounded-lg transition-colors ${
+                        isDark ? 'text-rose-400 hover:text-rose-300 hover:bg-rose-950/50' : 'text-rose-500 hover:text-rose-700 hover:bg-rose-50'
+                      }`}
                       title="Eliminar"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -667,6 +765,7 @@ const areProductCardPropsEqual = (
   const nSet = nextProps.settings;
   if (
     pSet.themeColor !== nSet.themeColor ||
+    pSet.themeMode !== nSet.themeMode ||
     pSet.currencySymbol !== nSet.currencySymbol ||
     pSet.storeName !== nSet.storeName ||
     pSet.whatsappNumber !== nSet.whatsappNumber

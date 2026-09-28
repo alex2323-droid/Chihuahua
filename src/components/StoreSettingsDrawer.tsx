@@ -14,6 +14,8 @@ import {
   Database,
   ExternalLink,
   RotateCcw,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { StoreSettings } from '../types/catalog';
 import { compressImageBase64 } from '../utils/imageUtils';
@@ -266,6 +268,50 @@ export const StoreSettingsDrawer: React.FC<StoreSettingsDrawerProps> = ({
                     <span className="truncate text-slate-800">{c.label}</span>
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Visual Theme Mode (Claro / Modo Dark Negro) */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-2">
+                Aspecto Visual (Tema de la Tienda)
+              </label>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, themeMode: 'light' })}
+                  className={`p-3 rounded-2xl border text-left flex items-center gap-2.5 transition-all cursor-pointer ${
+                    formData.themeMode !== 'dark'
+                      ? 'border-emerald-600 bg-emerald-50/70 ring-2 ring-emerald-500/20 shadow-xs'
+                      : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 shadow-2xs">
+                    <Sun className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold text-slate-900">Modo Claro</div>
+                    <div className="text-[10px] text-slate-500 truncate">Luminoso</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, themeMode: 'dark' })}
+                  className={`p-3 rounded-2xl border text-left flex items-center gap-2.5 transition-all cursor-pointer ${
+                    formData.themeMode === 'dark'
+                      ? 'border-emerald-500 bg-slate-950 text-white ring-2 ring-emerald-500/30 shadow-md'
+                      : 'border-slate-200 bg-slate-50 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-xl bg-slate-900 text-amber-400 flex items-center justify-center shrink-0 border border-slate-800">
+                    <Moon className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className={`text-xs font-bold ${formData.themeMode === 'dark' ? 'text-white' : 'text-slate-900'}`}>Modo Dark Negro</div>
+                    <div className={`text-[10px] ${formData.themeMode === 'dark' ? 'text-slate-400' : 'text-slate-500'} truncate`}>Obsidiana Puro</div>
+                  </div>
+                </button>
               </div>
             </div>
 

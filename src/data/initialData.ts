@@ -13,6 +13,7 @@ export const initialStoreSettings: StoreSettings = {
   instagramHandle: '@boutique.tendencias',
   currencySymbol: '$',
   themeColor: 'emerald',
+  themeMode: 'light',
   catalogLayout: 'grid-3',
   cartAnnouncement: '✨ ¡Por compras mayores a $50, el envío a domicilio es completamente gratis! 🚚💨',
   whatsappTemplateId: 'standard',

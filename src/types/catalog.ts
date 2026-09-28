@@ -41,6 +41,7 @@ export interface StoreSettings {
   instagramHandle: string;
   currencySymbol: string;
   themeColor: 'emerald' | 'amber' | 'cobalt' | 'rose' | 'dark' | 'violet';
+  themeMode?: 'light' | 'dark';
   catalogLayout: 'grid-3' | 'grid-2' | 'grid-4' | 'list' | 'story' | 'gallery';
   cartAnnouncement?: string;
   whatsappTemplateId?: string;
