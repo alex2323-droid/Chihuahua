@@ -48,6 +48,7 @@ import {
   Grid3X3,
   List,
   Columns4,
+  Images,
   Printer,
   Share2,
   SlidersHorizontal,
@@ -279,7 +280,7 @@ export default function App() {
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [layoutMode, setLayoutMode] = useState<'grid-3' | 'grid-2' | 'grid-4' | 'list'>('grid-3');
+  const [layoutMode, setLayoutMode] = useState<StoreSettings['catalogLayout']>('grid-3');
   const [copiedShareLink, setCopiedShareLink] = useState(false);
 
   // 0. Ultra-fast initial hydration from IndexedDB for instant 0ms product loading if local storage was empty
@@ -309,6 +310,9 @@ export default function App() {
       if (!isMounted) return;
       if (cachedSettings && cachedSettings.storeName) {
         setSettings((prev) => ({ ...prev, ...cachedSettings }));
+        if (cachedSettings.catalogLayout) {
+          setLayoutMode(cachedSettings.catalogLayout);
+        }
       }
     });
 
@@ -1198,7 +1202,9 @@ export default function App() {
     'grid-3': 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6',
     'grid-4': 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5',
     list: 'flex flex-col gap-4',
-  }[layoutMode];
+    story: 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4',
+    gallery: 'grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-6xl mx-auto',
+  }[layoutMode || 'grid-3'];
 
   if (!currentSellerName) {
     return (
@@ -1543,6 +1549,18 @@ export default function App() {
                 title="Vista Lista"
               >
                 <List className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setLayoutMode('gallery')}
+                className={`p-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
+                  layoutMode === 'gallery'
+                    ? 'bg-slate-900 text-white font-bold shadow-2xs'
+                    : 'text-slate-400 hover:text-slate-700'
+                }`}
+                title="Vista Galería Minimalista (Fotos Grandes)"
+              >
+                <Images className="w-4 h-4" />
+                <span className="text-[11px] hidden md:inline font-semibold">Galería</span>
               </button>
             </div>
           </div>

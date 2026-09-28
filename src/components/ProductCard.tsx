@@ -24,7 +24,7 @@ interface ProductCardProps {
   onAddToCart?: (product: Product) => void;
   onReExtract?: (product: Product) => void;
   onViewDetail?: (product: Product) => void;
-  layout?: 'grid-3' | 'grid-2' | 'grid-4' | 'list' | 'story';
+  layout?: 'grid-3' | 'grid-2' | 'grid-4' | 'list' | 'story' | 'gallery';
 }
 
 const ProductCardBase: React.FC<ProductCardProps> = ({
@@ -264,6 +264,198 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
               )}
             </>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  // Gallery Minimalist Layout (Large Images & Uncut Complete Descriptions)
+  if (layout === 'gallery') {
+    return (
+      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col group print-card">
+        {/* Large Hero Image Container */}
+        <div
+          onClick={() => onViewDetail && onViewDetail(product)}
+          className="relative aspect-4/3 sm:aspect-16/10 w-full bg-slate-100 overflow-hidden cursor-pointer"
+        >
+          {!imgError && imgSrc && imgSrc.trim() !== '' ? (
+            <img
+              src={imgSrc}
+              alt={product.title}
+              onError={handleImageError}
+              className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500 ease-out"
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400 p-8 text-center">
+              <Tag className="w-12 h-12 mb-2 opacity-40" />
+              <span className="text-sm font-medium">Imagen no disponible</span>
+            </div>
+          )}
+
+          {/* Minimalist Floating Badges */}
+          <div className="absolute top-3.5 left-3.5 flex flex-wrap gap-1.5 items-center z-10">
+            {product.category && (
+              <span className="bg-slate-900/80 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                {product.category}
+              </span>
+            )}
+            {product.badge && (
+              <span className="bg-emerald-600/90 backdrop-blur-md text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                {product.badge}
+              </span>
+            )}
+            {discountPercent && (
+              <span className="bg-rose-600/90 backdrop-blur-md text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full tracking-wider shadow-sm">
+                -{discountPercent}% OFF
+              </span>
+            )}
+            {product.images && product.images.length > 1 && (
+              <span className="bg-white/90 backdrop-blur-md text-slate-800 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm">
+                📷 {product.images.length} fotos
+              </span>
+            )}
+          </div>
+
+          {/* Top-right floating controls */}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute top-3.5 right-3.5 flex items-center gap-1.5 z-10 no-print"
+          >
+            {product.sourceUrl && !isCustomerMode && (
+              <button
+                onClick={handleManualReExtract}
+                disabled={isRefreshing}
+                className="p-2 bg-white/90 hover:bg-white text-slate-700 hover:text-emerald-700 rounded-xl backdrop-blur-md transition-all shadow-sm"
+                title="Actualizar foto desde la URL"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-emerald-600' : ''}`} />
+              </button>
+            )}
+            {product.sourceUrl && (
+              <a
+                href={product.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 bg-white/90 hover:bg-white text-slate-700 rounded-xl backdrop-blur-md transition-all shadow-sm"
+                title="Ver enlace original"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            )}
+          </div>
+        </div>
+
+        {/* Gallery Content Area (SIN descripciones cortadas, texto completo y elegante) */}
+        <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between">
+          <div
+            onClick={() => onViewDetail && onViewDetail(product)}
+            className="cursor-pointer"
+          >
+            {/* Top metadata */}
+            <div className="flex items-center justify-between gap-2 text-xs text-slate-500 mb-2">
+              <span className="font-semibold text-slate-600 tracking-wide">
+                {product.brand || 'Colección Oficial'}
+              </span>
+              {product.sku && (
+                <span className="font-mono text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100">
+                  REF: {product.sku}
+                </span>
+              )}
+            </div>
+
+            {/* Title (Full text, no line clamp) */}
+            <h3 className="font-display font-bold text-slate-900 text-lg sm:text-xl leading-snug group-hover:text-emerald-700 transition-colors mb-2.5">
+              {product.title}
+            </h3>
+
+            {/* Sizes tag */}
+            {product.sizes && (
+              <div className="inline-flex items-center gap-1.5 bg-purple-50 text-purple-700 border border-purple-200/80 px-2.5 py-1 rounded-lg text-xs font-semibold mb-3">
+                <Ruler className="w-3.5 h-3.5 text-purple-600" />
+                <span>Tallas disponibles: {product.sizes}</span>
+              </div>
+            )}
+
+            {/* Full Uncut Description (Sin cortes ni line-clamp) */}
+            {product.description && (
+              <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-line mb-5 font-normal">
+                {product.description}
+              </div>
+            )}
+          </div>
+
+          {/* Pricing & Minimalist Call to Action */}
+          <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              {product.sizeVariants && product.sizeVariants.length > 0 ? (
+                <div>
+                  <span className="text-[10px] uppercase tracking-wider font-extrabold text-purple-700 block mb-0.5">
+                    Precios desde:
+                  </span>
+                  <div className="flex items-baseline gap-1.5 font-mono">
+                    <span className="text-2xl font-extrabold text-slate-900">
+                      {product.currency}
+                      {Math.min(...product.sizeVariants.map((v) => v.price)).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-baseline gap-2 font-mono">
+                  <span className="text-2xl font-extrabold text-slate-900">
+                    {product.currency}
+                    {product.price.toFixed(2)}
+                  </span>
+                  {product.originalPrice && (
+                    <span className="text-sm text-slate-400 line-through">
+                      {product.currency}
+                      {product.originalPrice.toFixed(2)}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 no-print shrink-0">
+              {isCustomerMode ? (
+                <button
+                  onClick={() => onAddToCart && onAddToCart(product)}
+                  className={`px-5 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow-md ${themeAccentClasses}`}
+                >
+                  <ShoppingBag className="w-4 h-4" />
+                  <span>Pedir Artículo</span>
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={copyWhatsAppFormat}
+                    className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
+                    title="Copiar texto para WhatsApp"
+                  >
+                    {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                  {onEdit && (
+                    <button
+                      onClick={() => onEdit(product)}
+                      className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
+                      title="Editar"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button
+                      onClick={() => onDelete(product.id)}
+                      className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     );

@@ -269,6 +269,35 @@ export const StoreSettingsDrawer: React.FC<StoreSettingsDrawerProps> = ({
               </div>
             </div>
 
+            {/* Catalog Layout Selector */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-2">
+                Diseño Predeterminado del Catálogo
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {[
+                  { id: 'grid-3', label: '3 Columnas' },
+                  { id: 'grid-2', label: '2 Columnas' },
+                  { id: 'grid-4', label: '4 Columnas' },
+                  { id: 'list', label: 'Lista' },
+                  { id: 'gallery', label: '🖼️ Galería Minimalista' },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, catalogLayout: item.id as StoreSettings['catalogLayout'] })}
+                    className={`p-2.5 rounded-xl border text-left text-xs font-semibold flex items-center gap-2 transition-all ${
+                      formData.catalogLayout === item.id
+                        ? 'border-slate-900 bg-slate-900 text-white shadow-2xs'
+                        : 'border-slate-200 text-slate-700 hover:border-slate-300 bg-slate-50/50'
+                    }`}
+                  >
+                    <span className="truncate">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Logo and Cover Image */}
             <div className="space-y-3 pt-2 border-t border-slate-100">
               <div>
