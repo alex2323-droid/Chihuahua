@@ -7,6 +7,8 @@ import { WhatsAppCartDrawer } from './components/WhatsAppCartDrawer';
 import { PrintableCatalog } from './components/PrintableCatalog';
 import { LoginModal } from './components/LoginModal';
 import { ProductDetailModal } from './components/ProductDetailModal';
+import { SpecialOrderModal } from './components/SpecialOrderModal';
+import { CustomerProfileModal } from './components/CustomerProfileModal';
 import { HermesShoppingAgent } from './components/HermesShoppingAgent';
 import { initialStoreSettings, initialCatalogs } from './data/initialData';
 import { Product, StoreSettings, Catalog, CartItem } from './types/catalog';
@@ -66,6 +68,7 @@ import {
   ChevronDown,
   Loader2,
   Lock,
+  Package,
 } from 'lucide-react';
 import { LegalModals, LegalTab } from './components/LegalModals';
 import { CookieConsentBanner } from './components/CookieConsentBanner';
@@ -245,6 +248,8 @@ export default function App() {
   const [isExtractorOpen, setIsExtractorOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isSpecialOrderOpen, setIsSpecialOrderOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [selectedDetailProduct, setSelectedDetailProduct] = useState<Product | null>(null);
@@ -1254,6 +1259,8 @@ export default function App() {
         isCustomerMode={effectiveCustomerMode}
         cartCount={cart.reduce((s, i) => s + i.quantity, 0)}
         onOpenCart={() => setIsCartOpen(true)}
+        onOpenSpecialOrder={() => setIsSpecialOrderOpen(true)}
+        onOpenProfile={() => setIsProfileModalOpen(true)}
         currentSellerName={currentSellerName}
         onOpenLogin={() => setIsLoginOpen(true)}
         onLogout={handleLogoutSeller}
@@ -1811,6 +1818,21 @@ export default function App() {
         clientProfile={clientProfile}
         onUpdateClientProfile={handleUpdateClientProfile}
         onOpenLegal={(tab) => handleOpenLegal(tab)}
+      />
+
+      <SpecialOrderModal
+        isOpen={isSpecialOrderOpen}
+        onClose={() => setIsSpecialOrderOpen(false)}
+        settings={settings}
+        sellerId={activeViewingSellerUid}
+      />
+
+      <CustomerProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        clientProfile={clientProfile}
+        onUpdateClientProfile={handleUpdateClientProfile}
+        sellerUid={activeViewingSellerUid}
       />
 
       <ProductDetailModal

@@ -1,4 +1,4 @@
-import { CartItem, StoreSettings } from '../types/catalog';
+import { CartItem, StoreSettings, MRWShippingInfo } from '../types/catalog';
 import { renderCartWhatsAppMessage } from './whatsappTemplates';
 
 /**
@@ -47,6 +47,7 @@ export interface WhatsAppMessageOptions {
   settings: StoreSettings;
   customerName?: string;
   notes?: string;
+  mrwInfo?: MRWShippingInfo;
 }
 
 export const generateWhatsAppOrderMessage = ({
@@ -54,8 +55,9 @@ export const generateWhatsAppOrderMessage = ({
   settings,
   customerName = '',
   notes = '',
+  mrwInfo,
 }: WhatsAppMessageOptions): string => {
-  return renderCartWhatsAppMessage({ cart, settings, customerName, notes });
+  return renderCartWhatsAppMessage({ cart, settings, customerName, notes, mrwInfo });
 };
 
 /**

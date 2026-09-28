@@ -1,5 +1,6 @@
-import { StoreSettings, CartItem, Product } from '../types/catalog';
+import { StoreSettings, CartItem, Product, MRWShippingInfo } from '../types/catalog';
 import { getItemUnitPrice, calculateCartTotal } from './cartUtils';
+import { formatMRWShippingMessage } from './mrwData';
 
 export interface WhatsAppTemplatePreset {
   id: string;
@@ -204,11 +205,13 @@ export const renderCartWhatsAppMessage = ({
   settings,
   customerName = '',
   notes = '',
+  mrwInfo,
 }: {
   cart: CartItem[];
   settings: StoreSettings;
   customerName?: string;
   notes?: string;
+  mrwInfo?: MRWShippingInfo;
 }): string => {
   if (!cart || cart.length === 0) return '';
 
@@ -219,13 +222,17 @@ export const renderCartWhatsAppMessage = ({
   const productsText = formatCartProductsList(cart, currencySymbol);
   const itemCount = cart.reduce((sum, item) => sum + Math.max(0, item.quantity || 0), 0);
 
-  const customerBlock = customerName && customerName.trim()
+  let customerBlock = customerName && customerName.trim()
     ? `👤 *Nombre del Cliente:* ${customerName.trim()}`
     : '';
 
-  const notesBlock = notes && notes.trim()
+  let notesBlock = notes && notes.trim()
     ? `📝 *Notas/Dirección de Entrega:* ${notes.trim()}`
     : '';
+
+  if (mrwInfo && mrwInfo.fullName) {
+    notesBlock += formatMRWShippingMessage(mrwInfo);
+  }
 
   // Determine template to use
   let rawTemplate = WHATSAPP_CART_PRESETS[0].template;

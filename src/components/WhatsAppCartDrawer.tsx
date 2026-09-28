@@ -11,8 +11,10 @@ import {
   ShieldCheck,
   Lock,
 } from 'lucide-react';
-import { CartItem, StoreSettings } from '../types/catalog';
+import { CartItem, StoreSettings, MRWShippingInfo } from '../types/catalog';
 import { calculateCartTotal, getWhatsAppOrderUrl } from '../utils/cartUtils';
+import { MRWShippingForm } from './MRWShippingForm';
+import { DEFAULT_MRW_INFO } from '../utils/mrwData';
 
 interface WhatsAppCartDrawerProps {
   cart: CartItem[];
@@ -43,10 +45,27 @@ export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
   const [notes, setNotes] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(true);
 
+  // MRW Shipping State
+  const [mrwInfo, setMrwInfo] = useState<MRWShippingInfo>(() => {
+    try {
+      const saved = localStorage.getItem('catalogcraft_mrw_shipping_data');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') return { ...DEFAULT_MRW_INFO, ...parsed };
+      }
+    } catch {}
+    return { ...DEFAULT_MRW_INFO };
+  });
+
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
   React.useEffect(() => {
     if (clientProfile) {
       setCustomerName(clientProfile.username || '');
       setNotes(clientProfile.address || '');
+      if (clientProfile.username) {
+        setMrwInfo((prev) => ({ ...prev, fullName: prev.fullName || clientProfile.username }));
+      }
     }
   }, [clientProfile]);
 
@@ -86,6 +105,31 @@ export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
     return key;
   };
 
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    if (!mrwInfo.fullName || mrwInfo.fullName.trim().length < 3) {
+      errors.fullName = 'Ingresa el nombre y apellido del destinatario.';
+    }
+    if (!mrwInfo.cedula || mrwInfo.cedula.trim().length < 5) {
+      errors.cedula = 'Ingresa la cédula o RIF para la guía MRW.';
+    }
+    if (!mrwInfo.phone || mrwInfo.phone.trim().length < 7) {
+      errors.phone = 'Ingresa un teléfono de contacto válido.';
+    }
+    if (!mrwInfo.city || mrwInfo.city.trim().length < 2) {
+      errors.city = 'Ingresa la ciudad o municipio de entrega.';
+    }
+    if (!mrwInfo.agencyOrAddress || mrwInfo.agencyOrAddress.trim().length < 4) {
+      errors.agencyOrAddress =
+        mrwInfo.shippingType === 'agencia'
+          ? 'Ingresa la agencia u oficina de MRW destino.'
+          : 'Ingresa la dirección exacta de entrega a domicilio.';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSendWhatsApp = () => {
     if (cart.length === 0) return;
     if (!acceptedTerms) {
@@ -93,11 +137,17 @@ export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
       return;
     }
 
+    if (!validateForm()) {
+      alert('Por favor completa los datos obligatorios para el envío por MRW.');
+      return;
+    }
+
     const whatsappUrl = getWhatsAppOrderUrl({
       cart,
       settings,
-      customerName,
+      customerName: mrwInfo.fullName || customerName,
       notes,
+      mrwInfo,
     });
     window.open(whatsappUrl, '_blank');
   };
@@ -221,31 +271,15 @@ export const WhatsAppCartDrawer: React.FC<WhatsAppCartDrawerProps> = ({
                   </div>
                 )}
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Tu Nombre (Opcional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Ej: María López"
-                    value={customerName}
-                    onChange={(e) => handleNameChange(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Dirección o Notas de Pedido
-                  </label>
-                  <textarea
-                    rows={2}
-                    placeholder="Ej: Envío a domicilio o retiro en tienda..."
-                    value={notes}
-                    onChange={(e) => handleNotesChange(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs outline-none focus:border-emerald-500"
-                  />
-                </div>
+                {/* MRW Shipping Form */}
+                <MRWShippingForm
+                  shippingInfo={mrwInfo}
+                  onChange={(updated) => {
+                    setMrwInfo(updated);
+                    handleNameChange(updated.fullName);
+                  }}
+                  errors={formErrors}
+                />
 
                 {/* Legal Consent & Data Minimization ("Solo datos necesarios") */}
                 <div className="pt-2 border-t border-slate-100 space-y-2">

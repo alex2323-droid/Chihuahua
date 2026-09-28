@@ -1128,3 +1128,22 @@ export async function getPrimarySellerIdFromFirestore(): Promise<string> {
   } catch {}
   return KNOWN_CHIHUAHUA_UID;
 }
+
+// Save special order custom request to Firestore under seller account
+export async function saveSpecialOrderToFirestore(
+  sellerId: string,
+  request: any
+): Promise<string> {
+  try {
+    const docRef = doc(collection(db, 'sellers', sellerId, 'special_orders'));
+    await setDoc(docRef, {
+      ...request,
+      id: docRef.id,
+      createdAt: request.createdAt || new Date().toISOString(),
+    });
+    return docRef.id;
+  } catch (err) {
+    console.warn('Save special order to firestore error:', err);
+    return '';
+  }
+}

@@ -66,3 +66,26 @@ export interface CartItem {
   selectedImageCode?: string;
   unitPrice?: number;
 }
+
+export interface MRWShippingInfo {
+  fullName: string;
+  cedula: string;
+  phone: string;
+  state: string;
+  municipality?: string;
+  city: string;
+  shippingType: 'agencia' | 'domicilio';
+  agencyOrAddress: string;
+  notes?: string;
+}
+
+export interface SpecialOrderRequest {
+  id?: string;
+  productName: string;
+  specifications: string;
+  estimatedBudget?: string;
+  referenceUrlOrImage?: string;
+  shippingInfo: MRWShippingInfo;
+  createdAt?: string;
+  status?: 'pending' | 'quoted' | 'completed' | 'cancelled';
+}

@@ -14,6 +14,7 @@ import {
   LogOut,
   CloudCheck,
   ShieldCheck,
+  Package,
 } from 'lucide-react';
 import { StoreSettings, Catalog } from '../types/catalog';
 
@@ -30,6 +31,8 @@ interface HeaderProps {
   isCustomerMode: boolean;
   cartCount: number;
   onOpenCart: () => void;
+  onOpenSpecialOrder?: () => void;
+  onOpenProfile?: () => void;
   currentSellerName: string | null;
   onOpenLogin: () => void;
   onLogout: () => void;
@@ -50,6 +53,8 @@ export const Header: React.FC<HeaderProps> = ({
   isCustomerMode,
   cartCount,
   onOpenCart,
+  onOpenSpecialOrder,
+  onOpenProfile,
   currentSellerName,
   onOpenLogin,
   onLogout,
@@ -191,19 +196,45 @@ export const Header: React.FC<HeaderProps> = ({
             )}
 
             {isCustomerMode ? (
-              <button
-                onClick={onOpenCart}
-                className="relative px-2 sm:px-4 py-1.5 sm:py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] sm:text-xs rounded-xl shadow-xs transition-all flex items-center gap-1 sm:gap-2 shrink-0"
-              >
-                <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-                <span className="hidden xs:inline">Ver Pedido</span>
-                <span className="xs:hidden">Pedido</span>
-                {cartCount > 0 && (
-                  <span className="bg-white text-emerald-700 font-extrabold px-1.5 py-0.5 text-[9px] sm:text-[10px] rounded-full shrink-0">
-                    {cartCount}
-                  </span>
+              <div className="flex items-center gap-1 sm:gap-1.5">
+                {onOpenProfile && (
+                  <button
+                    onClick={onOpenProfile}
+                    className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-[11px] sm:text-xs rounded-xl shadow-2xs border border-slate-200 transition-all flex items-center gap-1 sm:gap-1.5 shrink-0 cursor-pointer"
+                    title="Gestionar mis datos personales y dirección para envíos por MRW"
+                  >
+                    <UserCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-600 shrink-0" />
+                    <span className="hidden md:inline">Mi Perfil MRW</span>
+                    <span className="md:hidden">Perfil</span>
+                  </button>
                 )}
-              </button>
+
+                {onOpenSpecialOrder && (
+                  <button
+                    onClick={onOpenSpecialOrder}
+                    className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-[11px] sm:text-xs rounded-xl shadow-xs transition-all flex items-center gap-1 sm:gap-1.5 shrink-0 cursor-pointer"
+                    title="Encargar un producto que no está en el catálogo"
+                  >
+                    <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-950 shrink-0" />
+                    <span className="hidden sm:inline">Encargar Especial</span>
+                    <span className="sm:hidden">Encargos</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={onOpenCart}
+                  className="relative px-2 sm:px-4 py-1.5 sm:py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] sm:text-xs rounded-xl shadow-xs transition-all flex items-center gap-1 sm:gap-2 shrink-0 cursor-pointer"
+                >
+                  <ShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                  <span className="hidden xs:inline">Ver Pedido</span>
+                  <span className="xs:hidden">Pedido</span>
+                  {cartCount > 0 && (
+                    <span className="bg-white text-emerald-700 font-extrabold px-1.5 py-0.5 text-[9px] sm:text-[10px] rounded-full shrink-0">
+                      {cartCount}
+                    </span>
+                  )}
+                </button>
+              </div>
             ) : (
               <>
                 <button
