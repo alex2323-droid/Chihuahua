@@ -15,9 +15,17 @@ import {
   Trash2,
   Loader2,
   HelpCircle,
+  ChevronRight,
+  Filter,
 } from 'lucide-react';
 import { Product, StoreSettings } from '../types/catalog';
-import { HermesMessage, parseHermesResponse, generateOfflineHermesReply } from '../utils/hermesAgentUtils';
+import {
+  HermesMessage,
+  HermesSuggestedQuestion,
+  HERMES_PRESET_QUESTIONS,
+  parseHermesResponse,
+  generateOfflineHermesReply,
+} from '../utils/hermesAgentUtils';
 
 interface HermesShoppingAgentProps {
   products: Product[];
@@ -26,11 +34,14 @@ interface HermesShoppingAgentProps {
   onSelectProduct: (product: Product) => void;
 }
 
-const INITIAL_SUGGESTIONS = [
-  '🎁 Recomiéndame un buen regalo',
-  '💵 ¿Qué tienen por menos de $20?',
-  '🚚 ¿Cómo funcionan los envíos y entregas?',
-  '🛒 ¿Cómo hago mi pedido por WhatsApp?',
+const CATEGORY_FILTERS = [
+  { id: 'all', label: '✨ Todas' },
+  { id: 'popular', label: '🎁 Regalos & Top' },
+  { id: 'budget', label: '💵 Precios & Ofertas' },
+  { id: 'shipping', label: '🚚 Envíos & MRW' },
+  { id: 'order', label: '🛒 Cómo Comprar' },
+  { id: 'payment', label: '💳 Pagos & Seguridad' },
+  { id: 'special', label: '📦 Encargos' },
 ];
 
 export const HermesShoppingAgent: React.FC<HermesShoppingAgentProps> = ({
@@ -45,13 +56,15 @@ export const HermesShoppingAgent: React.FC<HermesShoppingAgentProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [addedItemIds, setAddedItemIds] = useState<Set<string>>(new Set());
   const [hasUnreadGreeting, setHasUnreadGreeting] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [showAllSuggestions, setShowAllSuggestions] = useState(false);
 
   const [messages, setMessages] = useState<HermesMessage[]>(() => {
     return [
       {
         id: 'msg_welcome',
         sender: 'hermes',
-        text: `¡Hola! Soy **Hermes**, el asesor de compras virtual de **${storeSettings.storeName || 'Team Chihuahua'}**. 🛍️\n\n¿Buscas algún producto en especial, una recomendación por presupuesto o tienes dudas sobre entregas? ¡Dime en qué puedo ayudarte!`,
+        text: `¡Hola! Soy **Hermes**, el asesor de compras virtual de **${storeSettings.storeName || 'Team Chihuahua'}**. 🛍️\n\n¿Buscas algún producto en especial, una recomendación por presupuesto o tienes dudas sobre entregas? ¡Dime en qué puedo ayudarte o elige alguna de las preguntas predeterminadas abajo!`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       },
     ];
@@ -70,6 +83,10 @@ export const HermesShoppingAgent: React.FC<HermesShoppingAgentProps> = ({
       setHasUnreadGreeting(false);
     }
   }, [messages, isOpen, isMinimized]);
+
+  const filteredSuggestions = selectedCategory === 'all'
+    ? HERMES_PRESET_QUESTIONS
+    : HERMES_PRESET_QUESTIONS.filter((s) => s.category === selectedCategory);
 
   const handleSendMessage = async (textToSend?: string) => {
     const query = (textToSend || inputMessage).trim();
@@ -190,7 +207,7 @@ export const HermesShoppingAgent: React.FC<HermesShoppingAgentProps> = ({
                   e.stopPropagation();
                   setHasUnreadGreeting(false);
                 }}
-                className="text-slate-400 hover:text-slate-600 ml-1"
+                className="text-slate-400 hover:text-slate-600 ml-1 cursor-pointer"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -203,7 +220,7 @@ export const HermesShoppingAgent: React.FC<HermesShoppingAgentProps> = ({
               setIsMinimized(false);
               setHasUnreadGreeting(false);
             }}
-            className="group relative flex items-center gap-2.5 px-4 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-full shadow-2xl hover:shadow-emerald-500/25 transition-all duration-300 hover:scale-105 active:scale-95"
+            className="group relative flex items-center gap-2.5 px-4 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-full shadow-2xl hover:shadow-emerald-500/25 transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer"
             aria-label="Abrir asistente de compras Hermes"
           >
             <div className="relative">
@@ -212,7 +229,7 @@ export const HermesShoppingAgent: React.FC<HermesShoppingAgentProps> = ({
             </div>
             <div className="text-left hidden sm:block">
               <p className="text-xs font-bold leading-none">Hermes</p>
-              <p className="text-[10px] text-emerald-100 font-medium leading-tight">Asistente de Compras</p>
+              <p className="text-[10px] text-emerald-100 font-medium leading-tight">Asesor de Compras</p>
             </div>
             <Sparkles className="w-4 h-4 text-amber-300 group-hover:rotate-12 transition-transform" />
           </button>
@@ -225,7 +242,7 @@ export const HermesShoppingAgent: React.FC<HermesShoppingAgentProps> = ({
           className={`fixed right-3 sm:right-6 z-50 transition-all duration-300 ${
             isMinimized
               ? 'bottom-4 w-72 sm:w-80 h-14'
-              : 'bottom-4 sm:bottom-6 w-[calc(100vw-24px)] sm:w-96 max-h-[85vh] h-[560px]'
+              : 'bottom-4 sm:bottom-6 w-[calc(100vw-24px)] sm:w-96 max-h-[88vh] h-[600px]'
           } bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden`}
         >
           {/* Header */}
@@ -255,7 +272,7 @@ export const HermesShoppingAgent: React.FC<HermesShoppingAgentProps> = ({
                 <button
                   onClick={handleClearHistory}
                   title="Reiniciar conversación"
-                  className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-white/10 rounded-xl transition-colors"
+                  className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -263,14 +280,14 @@ export const HermesShoppingAgent: React.FC<HermesShoppingAgentProps> = ({
               <button
                 onClick={() => setIsMinimized(!isMinimized)}
                 title={isMinimized ? 'Expandir' : 'Minimizar'}
-                className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-white/10 rounded-xl transition-colors"
+                className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
               >
                 {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
               </button>
               <button
                 onClick={() => setIsOpen(false)}
                 title="Cerrar"
-                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-white/10 rounded-xl transition-colors"
+                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -282,7 +299,7 @@ export const HermesShoppingAgent: React.FC<HermesShoppingAgentProps> = ({
             <>
               {/* Message List */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/70 dark:bg-slate-950/50">
-                {messages.map((msg) => {
+                {messages.map((msg, index) => {
                   const isUser = msg.sender === 'user';
                   const recommendedProducts = (msg.recommendedProductIds || [])
                     .map((id) => products.find((p) => p.id === id))
@@ -317,6 +334,34 @@ export const HermesShoppingAgent: React.FC<HermesShoppingAgentProps> = ({
                           </span>
                         </div>
                       </div>
+
+                      {/* Initial Greeting Preset Questions Board (Only shown under the initial welcome message) */}
+                      {index === 0 && messages.length === 1 && (
+                        <div className="w-full mt-2 pl-8 pr-1 space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                              <HelpCircle className="w-3.5 h-3.5 text-emerald-500" />
+                              Preguntas Frecuentes Sugeridas:
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                            {HERMES_PRESET_QUESTIONS.slice(0, 6).map((preset) => (
+                              <button
+                                key={preset.id}
+                                onClick={() => handleSendMessage(preset.question)}
+                                className="p-2 bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-slate-750 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-left text-[11px] font-medium text-slate-700 dark:text-slate-200 transition-all flex items-center justify-between gap-1.5 shadow-2xs hover:border-emerald-300 cursor-pointer group"
+                              >
+                                <div className="flex items-center gap-1.5 truncate">
+                                  <span className="shrink-0">{preset.icon}</span>
+                                  <span className="truncate">{preset.shortLabel}</span>
+                                </div>
+                                <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-500 shrink-0" />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Render Interactive Product Cards */}
                       {recommendedProducts.length > 0 && (
@@ -357,7 +402,7 @@ export const HermesShoppingAgent: React.FC<HermesShoppingAgentProps> = ({
                                   <button
                                     onClick={() => onSelectProduct(prod)}
                                     title="Ver detalle del producto"
-                                    className="p-1.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                                    className="p-1.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer"
                                   >
                                     <Eye className="w-4 h-4" />
                                   </button>
@@ -365,7 +410,7 @@ export const HermesShoppingAgent: React.FC<HermesShoppingAgentProps> = ({
                                     onClick={() => handleAddToCartFromChat(prod)}
                                     disabled={!prod.inStock}
                                     title={prod.inStock ? 'Añadir al carrito' : 'Producto agotado'}
-                                    className={`p-1.5 rounded-xl font-medium text-xs flex items-center justify-center transition-all ${
+                                    className={`p-1.5 rounded-xl font-medium text-xs flex items-center justify-center transition-all cursor-pointer ${
                                       isAdded
                                         ? 'bg-emerald-600 text-white'
                                         : 'bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 disabled:opacity-40'
@@ -393,17 +438,40 @@ export const HermesShoppingAgent: React.FC<HermesShoppingAgentProps> = ({
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Quick suggestions */}
-              <div className="px-3 py-2 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                {INITIAL_SUGGESTIONS.map((sug, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleSendMessage(sug)}
-                    className="flex-shrink-0 text-[11px] bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-full whitespace-nowrap transition-colors"
-                  >
-                    {sug}
-                  </button>
-                ))}
+              {/* Categorized Quick Suggestions Section */}
+              <div className="bg-white dark:bg-slate-900 border-t border-slate-200/90 dark:border-slate-800 flex flex-col">
+                
+                {/* Category tabs */}
+                <div className="px-3 pt-2 pb-1 flex items-center gap-1 overflow-x-auto no-scrollbar">
+                  {CATEGORY_FILTERS.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCategory(cat.id)}
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-lg whitespace-nowrap transition-all cursor-pointer ${
+                        selectedCategory === cat.id
+                          ? 'bg-emerald-600 text-white shadow-2xs'
+                          : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Horizontal list of categorized question chips */}
+                <div className="px-3 py-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                  {filteredSuggestions.map((sug) => (
+                    <button
+                      key={sug.id}
+                      onClick={() => handleSendMessage(sug.question)}
+                      className="flex-shrink-0 text-[11px] font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-3 py-1 rounded-full whitespace-nowrap transition-colors border border-slate-200/60 dark:border-slate-700/60 hover:border-emerald-400 cursor-pointer flex items-center gap-1"
+                    >
+                      <span>{sug.icon}</span>
+                      <span>{sug.shortLabel}</span>
+                    </button>
+                  ))}
+                </div>
+
               </div>
 
               {/* Input bar */}
@@ -426,7 +494,7 @@ export const HermesShoppingAgent: React.FC<HermesShoppingAgentProps> = ({
                 <button
                   type="submit"
                   disabled={!inputMessage.trim() || isLoading}
-                  className="p-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl shadow-md disabled:opacity-40 transition-all flex items-center justify-center"
+                  className="p-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl shadow-md disabled:opacity-40 transition-all flex items-center justify-center cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
                 </button>

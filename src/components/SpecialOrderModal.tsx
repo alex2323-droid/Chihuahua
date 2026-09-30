@@ -121,7 +121,7 @@ export const SpecialOrderModal: React.FC<SpecialOrderModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 no-print overflow-y-auto">
-      <div className="bg-white max-w-lg w-full rounded-3xl shadow-2xl border border-slate-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white dark:bg-slate-900 max-w-lg w-full rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
         
         {/* Modal Header */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white relative">
@@ -159,31 +159,31 @@ export const SpecialOrderModal: React.FC<SpecialOrderModalProps> = ({
           
           {submitted ? (
             <div className="py-8 text-center space-y-3">
-              <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center animate-bounce">
+              <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center animate-bounce">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">¡Solicitud Enviada a WhatsApp!</h3>
-              <p className="text-xs text-slate-600 max-w-xs mx-auto">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">¡Solicitud Enviada a WhatsApp!</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-300 max-w-xs mx-auto">
                 Abrimos tu WhatsApp con todos los detalles de tu encargo especial y los datos para tu envío por MRW.
               </p>
             </div>
           ) : (
             <>
               {/* Step 1: Article Details */}
-              <div className="p-3.5 bg-emerald-50/60 border border-emerald-200/80 rounded-2xl space-y-3">
+              <div className="p-3.5 bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-900/60 rounded-2xl space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
                     <span className="w-5 h-5 rounded-full bg-emerald-600 text-white font-extrabold text-[11px] flex items-center justify-center">
                       1
                     </span>
                     <span>Detalles del Artículo que Buscas</span>
                   </span>
-                  <span className="text-[10px] text-emerald-700 font-bold">Encargo Personalizado</span>
+                  <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold">Encargo Personalizado</span>
                 </div>
 
                 {/* Article Name */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1">
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                     ¿Qué artículo o producto deseas encargar? <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -191,20 +191,20 @@ export const SpecialOrderModal: React.FC<SpecialOrderModalProps> = ({
                     placeholder="Ej: Calzado Nike Air Max Dn - Negras Talla 41"
                     value={productName}
                     onChange={(e) => setProductName(e.target.value)}
-                    className={`w-full px-3 py-2 bg-white border rounded-xl text-xs outline-none transition-all ${
+                    className={`w-full px-3 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border rounded-xl text-xs outline-none transition-all ${
                       formErrors.productName
-                        ? 'border-red-500 ring-2 ring-red-100'
-                        : 'border-slate-300 focus:border-emerald-500'
+                        ? 'border-red-500 ring-2 ring-red-100 dark:ring-red-950'
+                        : 'border-slate-300 dark:border-slate-700 focus:border-emerald-500'
                     }`}
                   />
                   {formErrors.productName && (
-                    <p className="text-[10px] text-red-600 mt-1">{formErrors.productName}</p>
+                    <p className="text-[10px] text-red-600 dark:text-red-400 mt-1">{formErrors.productName}</p>
                   )}
                 </div>
 
                 {/* Specs */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1">
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
                     Especificaciones (Talla, Color, Marca, Modelo)
                   </label>
                   <input
@@ -212,13 +212,13 @@ export const SpecialOrderModal: React.FC<SpecialOrderModalProps> = ({
                     placeholder="Ej: Talla 38 / Color Beige / Edición limitada"
                     value={specifications}
                     onChange={(e) => setSpecifications(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs outline-none focus:border-emerald-500"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-xl text-xs outline-none focus:border-emerald-500"
                   />
                 </div>
 
                 {/* Reference Link */}
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-800 mb-1">
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">
                     Enlace de Referencia / Foto (URL opcional)
                   </label>
                   <div className="relative">
@@ -227,7 +227,7 @@ export const SpecialOrderModal: React.FC<SpecialOrderModalProps> = ({
                       placeholder="https://..."
                       value={referenceUrl}
                       onChange={(e) => setReferenceUrl(e.target.value)}
-                      className="w-full pl-7 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-xs outline-none focus:border-emerald-500"
+                      className="w-full pl-7 pr-3 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-xl text-xs outline-none focus:border-emerald-500"
                     />
                     <Link className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                   </div>
@@ -236,7 +236,7 @@ export const SpecialOrderModal: React.FC<SpecialOrderModalProps> = ({
 
               {/* Step 2: MRW Shipping Info */}
               <div>
-                <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
                   <span className="w-5 h-5 rounded-full bg-red-600 text-white font-extrabold text-[11px] flex items-center justify-center">
                     2
                   </span>
@@ -251,11 +251,11 @@ export const SpecialOrderModal: React.FC<SpecialOrderModalProps> = ({
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-3 border-t border-slate-100 flex items-center gap-2">
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2.5 border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                  className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold text-xs rounded-xl transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>

@@ -146,7 +146,7 @@ export const WhatsAppTemplatesSection: React.FC<WhatsAppTemplatesSectionProps> =
   };
 
   return (
-    <div className="p-4 rounded-2xl border border-emerald-200/80 bg-emerald-50/40 space-y-4">
+    <div className="p-4 rounded-2xl border border-emerald-200/80 dark:border-emerald-900/60 bg-emerald-50/40 dark:bg-emerald-950/20 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -154,25 +154,25 @@ export const WhatsAppTemplatesSection: React.FC<WhatsAppTemplatesSectionProps> =
             <MessageSquare className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-xs font-bold text-slate-900">Plantillas de Mensajes WhatsApp</h3>
-            <p className="text-[10px] text-slate-500">Personaliza el texto de los pedidos y consultas</p>
+            <h3 className="text-xs font-bold text-slate-900 dark:text-white">Plantillas de Mensajes WhatsApp</h3>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400">Personaliza el texto de los pedidos y consultas</p>
           </div>
         </div>
-        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1">
-          <Sparkles className="w-3 h-3 text-emerald-600" />
+        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+          <Sparkles className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
           <span>Vendedor</span>
         </span>
       </div>
 
       {/* Tabs */}
-      <div className="flex p-1 bg-white border border-emerald-200/70 rounded-xl gap-1">
+      <div className="flex p-1 bg-white dark:bg-slate-850 border border-emerald-200/70 dark:border-emerald-900/60 rounded-xl gap-1">
         <button
           type="button"
           onClick={() => setActiveTab('cart')}
           className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
             activeTab === 'cart'
               ? 'bg-emerald-600 text-white shadow-2xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
           }`}
         >
           <Layers className="w-3.5 h-3.5" />
@@ -185,7 +185,7 @@ export const WhatsAppTemplatesSection: React.FC<WhatsAppTemplatesSectionProps> =
           className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
             activeTab === 'single'
               ? 'bg-emerald-600 text-white shadow-2xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
           }`}
         >
           <ShoppingBag className="w-3.5 h-3.5" />
@@ -196,7 +196,7 @@ export const WhatsAppTemplatesSection: React.FC<WhatsAppTemplatesSectionProps> =
       {/* TAB 1: CART ORDER TEMPLATES */}
       {activeTab === 'cart' && (
         <div className="space-y-3">
-          <label className="block text-[11px] font-bold text-slate-700">
+          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
             Selecciona una Plantilla Predeterminada:
           </label>
 
@@ -210,26 +210,26 @@ export const WhatsAppTemplatesSection: React.FC<WhatsAppTemplatesSectionProps> =
                   onClick={() => handleSelectCartPreset(preset)}
                   className={`p-2.5 rounded-xl border text-left transition-all relative flex flex-col justify-between cursor-pointer ${
                     isSelected
-                      ? 'border-emerald-600 bg-white ring-2 ring-emerald-500/20 shadow-xs'
-                      : 'border-slate-200 bg-white/70 hover:bg-white hover:border-slate-300'
+                      ? 'border-emerald-600 dark:border-emerald-500 bg-white dark:bg-slate-800 ring-2 ring-emerald-500/20 shadow-xs'
+                      : 'border-slate-200 dark:border-slate-750 bg-white/70 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-1 mb-1">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm">{preset.icon}</span>
-                      <span className="text-xs font-bold text-slate-900">{preset.name}</span>
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">{preset.name}</span>
                     </div>
                     {isSelected ? (
                       <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
                         <Check className="w-2.5 h-2.5 stroke-[3]" />
                       </span>
                     ) : (
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
                         {preset.badge}
                       </span>
                     )}
                   </div>
-                  <p className="text-[10px] text-slate-500 line-clamp-2 leading-snug">
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-snug">
                     {preset.description}
                   </p>
                 </button>
@@ -247,14 +247,14 @@ export const WhatsAppTemplatesSection: React.FC<WhatsAppTemplatesSectionProps> =
               }}
               className={`p-2.5 rounded-xl border text-left transition-all relative flex flex-col justify-between cursor-pointer sm:col-span-2 ${
                 activeCartTemplateId === 'custom'
-                  ? 'border-emerald-600 bg-white ring-2 ring-emerald-500/20 shadow-xs'
-                  : 'border-slate-200 bg-white/70 hover:bg-white hover:border-slate-300'
+                  ? 'border-emerald-600 dark:border-emerald-500 bg-white dark:bg-slate-800 ring-2 ring-emerald-500/20 shadow-xs'
+                  : 'border-slate-200 dark:border-slate-750 bg-white/70 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm">✍️</span>
-                  <span className="text-xs font-bold text-slate-900">Personalizado / Modo Libre</span>
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">Personalizado / Modo Libre</span>
                 </div>
                 {activeCartTemplateId === 'custom' && (
                   <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center">
@@ -262,7 +262,7 @@ export const WhatsAppTemplatesSection: React.FC<WhatsAppTemplatesSectionProps> =
                   </span>
                 )}
               </div>
-              <p className="text-[10px] text-slate-500">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">
                 Escribe tu propio texto o ajusta el saludo, despedida y emojis con las etiquetas dinámicas.
               </p>
             </button>
@@ -270,13 +270,13 @@ export const WhatsAppTemplatesSection: React.FC<WhatsAppTemplatesSectionProps> =
 
           {/* Editor Area when in custom mode */}
           {activeCartTemplateId === 'custom' && (
-            <div className="space-y-2 pt-2 border-t border-emerald-200/60">
+            <div className="space-y-2 pt-2 border-t border-emerald-200/60 dark:border-emerald-900/60">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-800">Editor de Plantilla:</span>
+                <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200">Editor de Plantilla:</span>
                 <button
                   type="button"
                   onClick={() => handleSelectCartPreset(WHATSAPP_CART_PRESETS[0])}
-                  className="text-[10px] text-emerald-700 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                  className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <RotateCcw className="w-3 h-3" />
                   <span>Restablecer a Estándar</span>
@@ -285,7 +285,7 @@ export const WhatsAppTemplatesSection: React.FC<WhatsAppTemplatesSectionProps> =
 
               {/* Dynamic Tag Pills */}
               <div className="flex flex-wrap items-center gap-1">
-                <span className="text-[10px] text-slate-400 font-medium">Insertar variable:</span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Insertar variable:</span>
                 {[
                   { tag: '{storeName}', label: 'Tienda' },
                   { tag: '{products}', label: 'Lista Productos' },
@@ -298,7 +298,7 @@ export const WhatsAppTemplatesSection: React.FC<WhatsAppTemplatesSectionProps> =
                     key={v.tag}
                     type="button"
                     onClick={() => handleInsertVariable(v.tag)}
-                    className="px-2 py-0.5 bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-100 rounded-md text-[10px] font-mono font-bold transition-colors cursor-pointer"
+                    className="px-2 py-0.5 bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 rounded-md text-[10px] font-mono font-bold transition-colors cursor-pointer"
                     title={`Insertar ${v.tag}`}
                   >
                     +{v.label}
@@ -316,7 +316,7 @@ export const WhatsAppTemplatesSection: React.FC<WhatsAppTemplatesSectionProps> =
                     whatsappCustomCartTemplate: e.target.value,
                   });
                 }}
-                className="w-full p-2.5 bg-white border border-emerald-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-200 font-mono text-slate-800"
+                className="w-full p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-emerald-300 dark:border-emerald-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-200 dark:focus:ring-emerald-800 font-mono"
                 placeholder="Escribe tu plantilla aquí..."
               />
             </div>
@@ -327,7 +327,7 @@ export const WhatsAppTemplatesSection: React.FC<WhatsAppTemplatesSectionProps> =
       {/* TAB 2: SINGLE PRODUCT TEMPLATES */}
       {activeTab === 'single' && (
         <div className="space-y-3">
-          <label className="block text-[11px] font-bold text-slate-700">
+          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
             Plantilla para Ficha de Producto Individual:
           </label>
 
@@ -341,26 +341,26 @@ export const WhatsAppTemplatesSection: React.FC<WhatsAppTemplatesSectionProps> =
                   onClick={() => handleSelectSinglePreset(preset)}
                   className={`p-2.5 rounded-xl border text-left transition-all relative flex flex-col justify-between cursor-pointer ${
                     isSelected
-                      ? 'border-emerald-600 bg-white ring-2 ring-emerald-500/20 shadow-xs'
-                      : 'border-slate-200 bg-white/70 hover:bg-white hover:border-slate-300'
+                      ? 'border-emerald-600 dark:border-emerald-500 bg-white dark:bg-slate-800 ring-2 ring-emerald-500/20 shadow-xs'
+                      : 'border-slate-200 dark:border-slate-750 bg-white/70 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-1 mb-1">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm">{preset.icon}</span>
-                      <span className="text-xs font-bold text-slate-900">{preset.name}</span>
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">{preset.name}</span>
                     </div>
                     {isSelected ? (
                       <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
                         <Check className="w-2.5 h-2.5 stroke-[3]" />
                       </span>
                     ) : (
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
                         {preset.badge}
                       </span>
                     )}
                   </div>
-                  <p className="text-[10px] text-slate-500 leading-snug">
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
                     {preset.description}
                   </p>
                 </button>
@@ -378,14 +378,14 @@ export const WhatsAppTemplatesSection: React.FC<WhatsAppTemplatesSectionProps> =
               }}
               className={`p-2.5 rounded-xl border text-left transition-all relative flex flex-col justify-between cursor-pointer ${
                 activeSingleTemplateId === 'custom'
-                  ? 'border-emerald-600 bg-white ring-2 ring-emerald-500/20 shadow-xs'
-                  : 'border-slate-200 bg-white/70 hover:bg-white hover:border-slate-300'
+                  ? 'border-emerald-600 dark:border-emerald-500 bg-white dark:bg-slate-800 ring-2 ring-emerald-500/20 shadow-xs'
+                  : 'border-slate-200 dark:border-slate-750 bg-white/70 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm">✍️</span>
-                  <span className="text-xs font-bold text-slate-900">Personalizado</span>
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">Personalizado</span>
                 </div>
                 {activeSingleTemplateId === 'custom' && (
                   <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center">
@@ -393,7 +393,7 @@ export const WhatsAppTemplatesSection: React.FC<WhatsAppTemplatesSectionProps> =
                   </span>
                 )}
               </div>
-              <p className="text-[10px] text-slate-500">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">
                 Escribe tu propio mensaje para consultas de productos individuales.
               </p>
             </button>
@@ -401,13 +401,13 @@ export const WhatsAppTemplatesSection: React.FC<WhatsAppTemplatesSectionProps> =
 
           {/* Editor Area for Single Product */}
           {activeSingleTemplateId === 'custom' && (
-            <div className="space-y-2 pt-2 border-t border-emerald-200/60">
+            <div className="space-y-2 pt-2 border-t border-emerald-200/60 dark:border-emerald-900/60">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-800">Editor de Plantilla:</span>
+                <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200">Editor de Plantilla:</span>
                 <button
                   type="button"
                   onClick={() => handleSelectSinglePreset(WHATSAPP_SINGLE_PRESETS[0])}
-                  className="text-[10px] text-emerald-700 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                  className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <RotateCcw className="w-3 h-3" />
                   <span>Restablecer</span>
@@ -416,7 +416,7 @@ export const WhatsAppTemplatesSection: React.FC<WhatsAppTemplatesSectionProps> =
 
               {/* Dynamic Tag Pills */}
               <div className="flex flex-wrap items-center gap-1">
-                <span className="text-[10px] text-slate-400 font-medium">Insertar variable:</span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Insertar variable:</span>
                 {[
                   { tag: '{storeName}', label: 'Tienda' },
                   { tag: '{title}', label: 'Título' },
@@ -430,7 +430,7 @@ export const WhatsAppTemplatesSection: React.FC<WhatsAppTemplatesSectionProps> =
                     key={v.tag}
                     type="button"
                     onClick={() => handleInsertVariable(v.tag)}
-                    className="px-2 py-0.5 bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-100 rounded-md text-[10px] font-mono font-bold transition-colors cursor-pointer"
+                    className="px-2 py-0.5 bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 rounded-md text-[10px] font-mono font-bold transition-colors cursor-pointer"
                     title={`Insertar ${v.tag}`}
                   >
                     +{v.label}
@@ -448,7 +448,7 @@ export const WhatsAppTemplatesSection: React.FC<WhatsAppTemplatesSectionProps> =
                     whatsappCustomSingleTemplate: e.target.value,
                   });
                 }}
-                className="w-full p-2.5 bg-white border border-emerald-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-200 font-mono text-slate-800"
+                className="w-full p-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-emerald-300 dark:border-emerald-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-200 dark:focus:ring-emerald-800 font-mono"
                 placeholder="Escribe tu plantilla aquí..."
               />
             </div>
@@ -457,19 +457,19 @@ export const WhatsAppTemplatesSection: React.FC<WhatsAppTemplatesSectionProps> =
       )}
 
       {/* WhatsApp Message Live Preview Bubble */}
-      <div className="pt-2 border-t border-emerald-200/60 space-y-1.5">
+      <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-900/60 space-y-1.5">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
+          <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
             <span>📱 Vista Previa en Vivo (WhatsApp):</span>
           </span>
           <button
             type="button"
             onClick={handleCopyPreview}
-            className="text-[10px] text-emerald-700 hover:text-emerald-900 font-bold flex items-center gap-1 cursor-pointer bg-white px-2 py-0.5 rounded-md border border-emerald-200"
+            className="text-[10px] text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 dark:hover:text-emerald-100 font-bold flex items-center gap-1 cursor-pointer bg-white dark:bg-slate-800 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-700 shadow-2xs"
           >
             {copiedPreview ? (
               <>
-                <Check className="w-3 h-3 text-emerald-600" />
+                <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                 <span>¡Copiado!</span>
               </>
             ) : (
@@ -481,17 +481,17 @@ export const WhatsAppTemplatesSection: React.FC<WhatsAppTemplatesSectionProps> =
           </button>
         </div>
 
-        <div className="p-3 bg-[#e5ddd5] dark:bg-slate-900 rounded-2xl border border-slate-300/80 shadow-inner">
-          <div className="max-w-xs ml-auto bg-[#dcf8c6] dark:bg-emerald-950 text-slate-900 dark:text-slate-100 p-3 rounded-2xl rounded-tr-none shadow-xs text-[11px] leading-relaxed relative whitespace-pre-wrap font-sans border border-emerald-200/50">
+        <div className="p-3 bg-[#e5ddd5] dark:bg-slate-950 rounded-2xl border border-slate-300/80 dark:border-slate-800 shadow-inner">
+          <div className="max-w-xs ml-auto bg-[#dcf8c6] dark:bg-emerald-950 text-slate-900 dark:text-emerald-100 p-3 rounded-2xl rounded-tr-none shadow-xs text-[11px] leading-relaxed relative whitespace-pre-wrap font-sans border border-emerald-200/50 dark:border-emerald-800">
             {currentPreviewText}
-            <div className="flex items-center justify-end gap-1 mt-1 text-[9px] text-slate-500">
+            <div className="flex items-center justify-end gap-1 mt-1 text-[9px] text-slate-500 dark:text-emerald-400/80">
               <span>12:00 PM</span>
-              <span className="text-emerald-700 font-bold">✓✓</span>
+              <span className="text-emerald-700 dark:text-emerald-400 font-bold">✓✓</span>
             </div>
           </div>
         </div>
 
-        <p className="text-[10px] text-slate-500 flex items-center gap-1">
+        <p className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
           <Info className="w-3 h-3 text-slate-400 shrink-0" />
           <span>Cuando tus clientes hagan clic en comprar, este será el mensaje que se abrirá en su WhatsApp.</span>
         </p>

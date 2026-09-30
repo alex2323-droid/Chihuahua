@@ -10,6 +10,7 @@ import { ProductDetailModal } from './components/ProductDetailModal';
 import { SpecialOrderModal } from './components/SpecialOrderModal';
 import { CustomerProfileModal } from './components/CustomerProfileModal';
 import { HermesShoppingAgent } from './components/HermesShoppingAgent';
+import { ProductSkeleton } from './components/ProductSkeleton';
 import { initialStoreSettings, initialCatalogs } from './data/initialData';
 import { Product, StoreSettings, Catalog, CartItem } from './types/catalog';
 import { isLogoUrl, optimizeProductImageSize } from './utils/imageUtils';
@@ -1620,28 +1621,11 @@ export default function App() {
 
         {/* Product Grid Area */}
         {isLoadingCatalogs && (!activeCatalog || activeCatalog.products.length === 0) ? (
-          <div className={gridLayoutClass}>
-            {[1, 2, 3, 4, 5, 6].map((idx) => (
-              <div
-                key={idx}
-                className={`rounded-3xl border p-4 animate-pulse flex flex-col space-y-3 shadow-xs ${
-                  isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/80'
-                }`}
-              >
-                <div className={`w-full aspect-square rounded-2xl flex items-center justify-center ${
-                  isDark ? 'bg-slate-950 text-slate-600' : 'bg-slate-100 text-slate-300'
-                }`}>
-                  <Sparkles className="w-8 h-8 opacity-25" />
-                </div>
-                <div className={`h-4 rounded-md w-3/4 ${isDark ? 'bg-slate-800' : 'bg-slate-100'}`} />
-                <div className={`h-3 rounded-md w-1/2 ${isDark ? 'bg-slate-800' : 'bg-slate-100'}`} />
-                <div className="flex justify-between items-center pt-2">
-                  <div className={`h-5 rounded-md w-1/3 ${isDark ? 'bg-slate-800' : 'bg-slate-100'}`} />
-                  <div className={`h-8 rounded-xl w-24 ${isDark ? 'bg-slate-800' : 'bg-slate-100'}`} />
-                </div>
-              </div>
-            ))}
-          </div>
+          <ProductSkeleton
+            layout={layoutMode}
+            isDark={isDark}
+            count={layoutMode === 'gallery' ? 4 : layoutMode === 'grid-4' ? 8 : 6}
+          />
         ) : filteredProducts.length === 0 ? (
           <div className={`rounded-3xl border p-12 text-center max-w-md mx-auto my-12 shadow-2xs ${
             isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200/90 text-slate-900'

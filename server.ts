@@ -1144,7 +1144,10 @@ INFORMACIÓN DE LA TIENDA:
 - Nombre: ${storeName}
 - Moneda: ${currency}
 - Política/Anuncio: ${announcement}
-- Proceso de compra: El cliente selecciona sus productos, abre el carrito y envía el pedido directamente por WhatsApp para coordinar pago y entrega.
+- Envíos: Envíos a agencias MRW a nivel nacional en toda Venezuela y entregas a domicilio.
+- Métodos de Pago: Pago Móvil, transferencias bancarias, divisas en efectivo y métodos digitales coordinados por WhatsApp.
+- Pedidos Especiales: Si el cliente busca un artículo que no está en catálogo, puede solicitar un "Pedido Especial" por WhatsApp enviando la foto o descripción.
+- Proceso de compra: El cliente selecciona sus productos con "+", abre el carrito y envía el pedido directamente por WhatsApp para confirmar pago y entrega.
 
 CATÁLOGO ACTUAL DE PRODUCTOS:
 ${compactCatalog || 'Catálogo general de productos.'}
@@ -1154,8 +1157,8 @@ INSTRUCCIONES IMPORTANTES:
 2. NUNCA inventes productos ni cambies sus precios reales. Basa tus recomendaciones ÚNICAMENTE en el catálogo provisto.
 3. Si recomiendas uno o más productos específicos del catálogo, añade al final de tu respuesta una etiqueta con el siguiente formato exacto:
 [RECOMMENDED_PRODUCTS: id1, id2]
-(máximo 3 productos relevantes).
-4. Si el usuario pregunta por envíos o cómo pagar, explícale brevemente el proceso amigable por WhatsApp.
+(máximo 3 o 4 productos relevantes).
+4. Si el usuario pregunta por envíos, pagos, tallas o pedidos especiales, explícale brevemente el proceso amigable.
 5. Mantén tus respuestas breves y legibles (máximo 3 a 5 oraciones).`;
 
     const chatHistory = Array.isArray(history)

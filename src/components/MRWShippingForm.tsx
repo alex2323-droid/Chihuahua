@@ -237,21 +237,21 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
   }, [shippingInfo.shippingType, shippingInfo.agencyOrAddress]);
 
   return (
-    <div className="space-y-3.5 p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl">
+    <div className="space-y-3.5 p-3.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200/90 dark:border-slate-700/80 rounded-2xl">
       {/* Header Banner */}
-      <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+      <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-700">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-lg bg-red-600 text-white font-black text-[10px] flex items-center justify-center shadow-2xs shrink-0 tracking-tighter">
             MRW
           </div>
           <div>
-            <h3 className="text-xs font-bold text-slate-900">
+            <h3 className="text-xs font-bold text-slate-900 dark:text-white">
               Datos para Envío Nacional MRW
             </h3>
-            <p className="text-[10px] text-slate-500">250 agencias oficiales sincronizadas a nivel nacional</p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400">250 agencias oficiales sincronizadas a nivel nacional</p>
           </div>
         </div>
-        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-200/60">
+        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300 border border-red-200/60 dark:border-red-900/60">
           MRW Venezuela
         </span>
       </div>
@@ -259,7 +259,7 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         {/* Full Name */}
         <div className="sm:col-span-2">
-          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
             Nombre y Apellido Destinatario <span className="text-red-500">*</span>
           </label>
           <div className="relative">
@@ -268,14 +268,14 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
               placeholder="Ej: María Alejandra Pérez"
               value={shippingInfo.fullName}
               onChange={(e) => handleChange('fullName', e.target.value)}
-              className={`w-full pl-8 pr-3 py-1.5 bg-white border rounded-xl text-xs outline-none transition-colors ${
-                errors.fullName ? 'border-red-500 bg-red-50/50' : 'border-slate-300 focus:border-red-500'
+              className={`w-full pl-8 pr-3 py-1.5 bg-white dark:bg-slate-900 border rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition-colors ${
+                errors.fullName ? 'border-red-500 bg-red-50/50 dark:bg-red-950/30' : 'border-slate-300 dark:border-slate-700 focus:border-red-500'
               }`}
             />
-            <User className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <User className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
           </div>
           {errors.fullName && (
-            <p className="text-[10px] text-red-600 mt-0.5 flex items-center gap-1 font-medium">
+            <p className="text-[10px] text-red-600 dark:text-red-400 mt-0.5 flex items-center gap-1 font-medium">
               <AlertCircle className="w-3 h-3 shrink-0" />
               <span>{errors.fullName}</span>
             </p>
@@ -284,7 +284,7 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
 
         {/* Cédula / RIF */}
         <div>
-          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
             Cédula de Identidad / RIF <span className="text-red-500">*</span>
           </label>
           <div className="relative">
@@ -293,14 +293,14 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
               placeholder="Ej: V-18.492.512"
               value={shippingInfo.cedula}
               onChange={(e) => handleChange('cedula', e.target.value)}
-              className={`w-full pl-8 pr-3 py-1.5 bg-white border rounded-xl text-xs outline-none transition-colors font-mono ${
-                errors.cedula ? 'border-red-500 bg-red-50/50' : 'border-slate-300 focus:border-red-500'
+              className={`w-full pl-8 pr-3 py-1.5 bg-white dark:bg-slate-900 border rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition-colors font-mono ${
+                errors.cedula ? 'border-red-500 bg-red-50/50 dark:bg-red-950/30' : 'border-slate-300 dark:border-slate-700 focus:border-red-500'
               }`}
             />
-            <CreditCard className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <CreditCard className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
           </div>
           {errors.cedula && (
-            <p className="text-[10px] text-red-600 mt-0.5 flex items-center gap-1 font-medium">
+            <p className="text-[10px] text-red-600 dark:text-red-400 mt-0.5 flex items-center gap-1 font-medium">
               <AlertCircle className="w-3 h-3 shrink-0" />
               <span>{errors.cedula}</span>
             </p>
@@ -309,7 +309,7 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
 
         {/* Phone */}
         <div>
-          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
             Teléfono de Contacto MRW <span className="text-red-500">*</span>
           </label>
           <div className="relative">
@@ -318,14 +318,14 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
               placeholder="Ej: 0414-1234567"
               value={shippingInfo.phone}
               onChange={(e) => handleChange('phone', e.target.value)}
-              className={`w-full pl-8 pr-3 py-1.5 bg-white border rounded-xl text-xs outline-none transition-colors font-mono ${
-                errors.phone ? 'border-red-500 bg-red-50/50' : 'border-slate-300 focus:border-red-500'
+              className={`w-full pl-8 pr-3 py-1.5 bg-white dark:bg-slate-900 border rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none transition-colors font-mono ${
+                errors.phone ? 'border-red-500 bg-red-50/50 dark:bg-red-950/30' : 'border-slate-300 dark:border-slate-700 focus:border-red-500'
               }`}
             />
-            <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <Phone className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
           </div>
           {errors.phone && (
-            <p className="text-[10px] text-red-600 mt-0.5 flex items-center gap-1 font-medium">
+            <p className="text-[10px] text-red-600 dark:text-red-400 mt-0.5 flex items-center gap-1 font-medium">
               <AlertCircle className="w-3 h-3 shrink-0" />
               <span>{errors.phone}</span>
             </p>
@@ -334,7 +334,7 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
 
         {/* Shipping Type */}
         <div className="sm:col-span-2">
-          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
             Modalidad de Envío por MRW
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -346,14 +346,14 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
               }}
               className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 cursor-pointer transition-all ${
                 shippingInfo.shippingType === 'agencia'
-                  ? 'border-red-600 bg-red-50/70 text-red-900 font-bold ring-2 ring-red-500/20'
-                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                  ? 'border-red-600 bg-red-50/70 dark:bg-red-950/40 text-red-900 dark:text-red-200 font-bold ring-2 ring-red-500/20'
+                  : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
-              <Building2 className="w-4 h-4 text-red-600 shrink-0" />
+              <Building2 className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
               <div>
                 <span className="block text-xs font-bold">Agencia MRW</span>
-                <span className="text-[10px] text-slate-500 block font-normal">Retiro nacional (250 agencias)</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-normal">Retiro nacional (250 agencias)</span>
               </div>
             </button>
 
@@ -383,11 +383,11 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
               }}
               className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 cursor-pointer transition-all ${
                 shippingInfo.shippingType === 'domicilio'
-                  ? 'border-red-600 bg-red-50/70 text-red-900 font-bold ring-2 ring-red-500/20'
-                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                  ? 'border-red-600 bg-red-50/70 dark:bg-red-950/40 text-red-900 dark:text-red-200 font-bold ring-2 ring-red-500/20'
+                  : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
-              <Truck className="w-4 h-4 text-red-600 shrink-0" />
+              <Truck className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
               <div>
                 <div className="flex items-center gap-1.5">
                   <span className="block text-xs font-bold">A Domicilio</span>
@@ -395,7 +395,7 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
                     Exclusivo
                   </span>
                 </div>
-                <span className="text-[10px] text-red-700 block font-semibold">Toda Zaraza y Valle de la Pascua</span>
+                <span className="text-[10px] text-red-700 dark:text-red-300 block font-semibold">Toda Zaraza y Valle de la Pascua</span>
               </div>
             </button>
           </div>
@@ -405,12 +405,12 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
         {shippingInfo.shippingType === 'domicilio' && (
           <div className="sm:col-span-2 space-y-2.5">
             <div className="flex items-center justify-between">
-              <label className="block text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-red-600" />
+              <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
                 <span>Zona de Entrega a Domicilio Autorizada</span>
                 <span className="text-red-500">*</span>
               </label>
-              <span className="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full border border-red-200">
+              <span className="text-[10px] font-bold text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-950/50 px-2 py-0.5 rounded-full border border-red-200 dark:border-red-900/60">
                 Estado Guárico
               </span>
             </div>
@@ -438,16 +438,16 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
                     }}
                     className={`p-3 rounded-xl border text-left flex items-start justify-between gap-2 cursor-pointer transition-all ${
                       isSelected
-                        ? 'border-red-600 bg-red-50/90 ring-2 ring-red-500/20 shadow-2xs text-red-950 font-bold'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                        ? 'border-red-600 bg-red-50/90 dark:bg-red-950/50 ring-2 ring-red-500/20 shadow-2xs text-red-950 dark:text-red-200 font-bold'
+                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:border-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                     }`}
                   >
                     <div>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-slate-900">{loc.displayName}</span>
-                        {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-red-600 shrink-0" />}
+                        <span className="text-xs font-bold text-slate-900 dark:text-white">{loc.displayName}</span>
+                        {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-red-600 dark:text-red-400 shrink-0" />}
                       </div>
-                      <span className="text-[10px] text-slate-500 block font-normal mt-0.5">
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-normal mt-0.5">
                         {loc.description}
                       </span>
                     </div>
@@ -456,8 +456,8 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
               })}
             </div>
 
-            <div className="p-2.5 bg-amber-50/90 border border-amber-200 rounded-xl text-[11px] text-amber-900 flex items-start gap-2">
-              <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="p-2.5 bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 rounded-xl text-[11px] text-amber-900 dark:text-amber-200 flex items-start gap-2">
+              <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
               <span>
                 <strong>Importante:</strong> Los envíos a domicilio son <strong>únicamente en toda Zaraza y toda Valle de la Pascua</strong>. Para el resto del país, selecciona <strong>Agencia MRW</strong> para retirar en cualquiera de las 250 sucursales.
               </span>
@@ -470,13 +470,13 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
           <>
             {/* State */}
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Estado (Venezuela) <span className="text-red-500">*</span>
               </label>
               <select
                 value={shippingInfo.state}
                 onChange={(e) => handleStateChange(e.target.value)}
-                className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-xl text-xs outline-none focus:border-red-500 font-medium"
+                className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 outline-none focus:border-red-500 font-medium cursor-pointer"
               >
                 {VENEZUELA_STATES.map((st) => (
                   <option key={st} value={st}>
@@ -489,11 +489,11 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
             {/* Municipality */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-[11px] font-bold text-slate-700">
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
                   Municipio <span className="text-red-500">*</span>
                 </label>
                 {availableMunicipalities.length > 0 && (
-                  <span className="text-[10px] text-red-600 font-semibold">
+                  <span className="text-[10px] text-red-600 dark:text-red-400 font-semibold">
                     {availableMunicipalities.length} {availableMunicipalities.length === 1 ? 'municipio' : 'municipios'}
                   </span>
                 )}
@@ -502,7 +502,7 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
                 <select
                   value={shippingInfo.municipality || ''}
                   onChange={(e) => handleMunicipalityChange(e.target.value)}
-                  className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-xl text-xs outline-none focus:border-red-500 font-medium"
+                  className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 outline-none focus:border-red-500 font-medium cursor-pointer"
                 >
                   {availableMunicipalities.map((mun) => {
                     const count = getMRWAgenciesByStateAndCity(shippingInfo.state, undefined, mun).length;
@@ -519,7 +519,7 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
                   placeholder="Municipio..."
                   value={shippingInfo.municipality || ''}
                   onChange={(e) => handleChange('municipality', e.target.value)}
-                  className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-xl text-xs outline-none focus:border-red-500 font-medium"
+                  className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 outline-none focus:border-red-500 font-medium"
                 />
               )}
             </div>
@@ -527,11 +527,11 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
             {/* City / Población with Agency Count */}
             <div className="sm:col-span-2">
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-[11px] font-bold text-slate-700">
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
                   Ciudad / Población <span className="text-red-500">*</span>
                 </label>
                 {availableCities.length > 0 && (
-                  <span className="text-[10px] text-slate-500 font-semibold">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
                     {availableCities.length} {availableCities.length === 1 ? 'ciudad' : 'ciudades'} con MRW en este municipio
                   </span>
                 )}
@@ -541,8 +541,8 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
                 <select
                   value={shippingInfo.city}
                   onChange={(e) => handleCityChange(e.target.value)}
-                  className={`w-full px-2.5 py-1.5 bg-white border rounded-xl text-xs outline-none transition-colors font-medium ${
-                    errors.city ? 'border-red-500 bg-red-50/50' : 'border-slate-300 focus:border-red-500'
+                  className={`w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border rounded-xl text-xs text-slate-900 dark:text-slate-100 outline-none transition-colors font-medium cursor-pointer ${
+                    errors.city ? 'border-red-500 bg-red-50/50 dark:bg-red-950/30' : 'border-slate-300 dark:border-slate-700 focus:border-red-500'
                   }`}
                 >
                   {availableCities.map((ct) => {
@@ -561,16 +561,16 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
                     placeholder="Ej: Tucupido, Zaraza, Valencia, Caracas..."
                     value={shippingInfo.city}
                     onChange={(e) => handleChange('city', e.target.value)}
-                    className={`w-full pl-8 pr-3 py-1.5 bg-white border rounded-xl text-xs outline-none transition-colors ${
-                      errors.city ? 'border-red-500 bg-red-50/50' : 'border-slate-300 focus:border-red-500'
+                    className={`w-full pl-8 pr-3 py-1.5 bg-white dark:bg-slate-900 border rounded-xl text-xs text-slate-900 dark:text-slate-100 outline-none transition-colors ${
+                      errors.city ? 'border-red-500 bg-red-50/50 dark:bg-red-950/30' : 'border-slate-300 dark:border-slate-700 focus:border-red-500'
                     }`}
                   />
-                  <MapPin className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <MapPin className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
                 </div>
               )}
 
               {errors.city && (
-                <p className="text-[10px] text-red-600 mt-0.5 flex items-center gap-1 font-medium">
+                <p className="text-[10px] text-red-600 dark:text-red-400 mt-0.5 flex items-center gap-1 font-medium">
                   <AlertCircle className="w-3 h-3 shrink-0" />
                   <span>{errors.city}</span>
                 </p>
@@ -583,8 +583,8 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
         {shippingInfo.shippingType === 'agencia' && (
           <div className="sm:col-span-2 space-y-2 pt-1">
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <label className="block text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-red-600" />
+              <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
                 <span>
                   Agencias MRW en {shippingInfo.city || shippingInfo.state} ({availableAgencies.length})
                 </span>
@@ -597,17 +597,17 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
                   type="button"
                   onClick={handleFindClosestAgency}
                   disabled={isLocating}
-                  className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-2 py-0.5 rounded-lg border border-emerald-300 flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                  className="text-[10px] font-extrabold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/50 hover:bg-emerald-200 dark:hover:bg-emerald-900/60 px-2 py-0.5 rounded-lg border border-emerald-300 dark:border-emerald-800 flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
                   title="Detectar con GPS la agencia de MRW más cercana a ti"
                 >
                   {isLocating ? (
                     <>
-                      <Loader2 className="w-3 h-3 animate-spin text-emerald-700" />
+                      <Loader2 className="w-3 h-3 animate-spin text-emerald-700 dark:text-emerald-400" />
                       <span>Buscando...</span>
                     </>
                   ) : (
                     <>
-                      <Compass className="w-3 h-3 text-emerald-700" />
+                      <Compass className="w-3 h-3 text-emerald-700 dark:text-emerald-400" />
                       <span>📍 Más Cercana</span>
                     </>
                   )}
@@ -617,10 +617,10 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsAgencySearchOpen(true)}
-                  className="text-[10px] font-extrabold text-red-700 bg-red-100 hover:bg-red-200 px-2 py-0.5 rounded-lg border border-red-200 flex items-center gap-1 transition-colors cursor-pointer"
+                  className="text-[10px] font-extrabold text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-950/50 hover:bg-red-200 dark:hover:bg-red-900/60 px-2 py-0.5 rounded-lg border border-red-200 dark:border-red-900/60 flex items-center gap-1 transition-colors cursor-pointer"
                   title="Abrir buscador completo de las 250 agencias oficiales de Venezuela"
                 >
-                  <Search className="w-3 h-3 text-red-600" />
+                  <Search className="w-3 h-3 text-red-600 dark:text-red-400" />
                   <span>Buscador Oficial</span>
                 </button>
 
@@ -628,7 +628,7 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
                   href={OFFICIAL_MRW_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[10px] text-slate-500 hover:text-red-600 flex items-center gap-0.5"
+                  className="text-[10px] text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 flex items-center gap-0.5"
                   title="Consultar directorio oficial en mrwve.com"
                 >
                   <ExternalLink className="w-3 h-3" />
@@ -643,7 +643,7 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
                 <select
                   value={currentAgency ? currentAgency.code : ''}
                   onChange={(e) => handleAgencySelect(e.target.value)}
-                  className="w-full p-2 bg-white border border-red-300 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
+                  className="w-full p-2 bg-white dark:bg-slate-900 border border-red-300 dark:border-red-900/60 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500 cursor-pointer"
                 >
                   <option value="" disabled>
                     -- Selecciona la agencia MRW en {shippingInfo.city} --
@@ -657,27 +657,27 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
 
                 {/* Selected Agency Preview Card */}
                 {currentAgency ? (
-                  <div className="p-3 bg-red-50/70 border border-red-200 rounded-xl space-y-1.5 shadow-2xs">
+                  <div className="p-3 bg-red-50/70 dark:bg-red-950/30 border border-red-200 dark:border-red-900/60 rounded-xl space-y-1.5 shadow-2xs">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-[10px] font-mono font-black bg-red-600 text-white px-1.5 py-0.5 rounded">
                           {currentAgency.code}
                         </span>
-                        <span className="text-xs font-bold text-red-950">{currentAgency.name}</span>
+                        <span className="text-xs font-bold text-red-950 dark:text-red-200">{currentAgency.name}</span>
                       </div>
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3" />
                         <span>Agencia Seleccionada</span>
                       </span>
                     </div>
 
-                    <p className="text-[11px] text-slate-700 leading-relaxed font-medium flex items-start gap-1">
+                    <p className="text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed font-medium flex items-start gap-1">
                       <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
                       <span>{currentAgency.address}</span>
                     </p>
 
                     <div className="flex items-center justify-between pt-1 text-[10px] flex-wrap gap-2">
-                      <span className="text-slate-600 font-medium">
+                      <span className="text-slate-600 dark:text-slate-400 font-medium">
                         📍 {currentAgency.state} • 🏛️ Mnpio. {currentAgency.municipality} • 🏙️ {currentAgency.city}
                       </span>
                       <div className="flex items-center gap-2">
@@ -686,7 +686,7 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
                             href={`https://www.google.com/maps/search/?api=1&query=${currentAgency.lat},${currentAgency.lng}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-red-700 hover:text-red-800 underline flex items-center gap-0.5 font-bold"
+                            className="text-red-700 dark:text-red-400 hover:underline flex items-center gap-0.5 font-bold"
                           >
                             <Globe className="w-3 h-3" />
                             <span>Ver mapa</span>
@@ -695,7 +695,7 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
                         <button
                           type="button"
                           onClick={() => setIsManualInput(true)}
-                          className="text-slate-500 hover:text-slate-800 underline flex items-center gap-0.5 cursor-pointer"
+                          className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 underline flex items-center gap-0.5 cursor-pointer"
                         >
                           <Edit3 className="w-3 h-3" />
                           <span>Editar texto</span>
@@ -704,8 +704,8 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
                     </div>
                   </div>
                 ) : (
-                  <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-800 flex items-center gap-2">
-                    <Info className="w-4 h-4 text-amber-600 shrink-0" />
+                  <div className="p-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 rounded-xl text-[11px] text-amber-800 dark:text-amber-200 flex items-center gap-2">
+                    <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                     <span>Por favor selecciona tu agencia en la lista superior para completar el pedido.</span>
                   </div>
                 )}
@@ -717,10 +717,10 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
                   placeholder="Ej: #0800000 - MRW Valencia Centro (Av. Miranda Local 118-31)"
                   value={shippingInfo.agencyOrAddress}
                   onChange={(e) => handleChange('agencyOrAddress', e.target.value)}
-                  className={`w-full p-2 bg-white border rounded-xl text-xs outline-none transition-colors ${
+                  className={`w-full p-2 bg-white dark:bg-slate-900 border rounded-xl text-xs text-slate-900 dark:text-slate-100 outline-none transition-colors ${
                     errors.agencyOrAddress
-                      ? 'border-red-500 bg-red-50/50'
-                      : 'border-slate-300 focus:border-red-500'
+                      ? 'border-red-500 bg-red-50/50 dark:bg-red-950/30'
+                      : 'border-slate-300 dark:border-slate-700 focus:border-red-500'
                   }`}
                 />
                 {availableAgencies.length > 0 && (
@@ -732,7 +732,7 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
                         handleAgencySelect(availableAgencies[0].code);
                       }
                     }}
-                    className="text-[10px] text-red-600 hover:text-red-800 font-bold underline cursor-pointer"
+                    className="text-[10px] text-red-600 dark:text-red-400 hover:underline font-bold cursor-pointer"
                   >
                     ← Volver a la lista de agencias de {shippingInfo.city}
                   </button>
@@ -741,7 +741,7 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
             )}
 
             {errors.agencyOrAddress && (
-              <p className="text-[10px] text-red-600 mt-0.5 flex items-center gap-1 font-medium">
+              <p className="text-[10px] text-red-600 dark:text-red-400 mt-0.5 flex items-center gap-1 font-medium">
                 <AlertCircle className="w-3 h-3 shrink-0" />
                 <span>{errors.agencyOrAddress}</span>
               </p>
@@ -752,7 +752,7 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
         {/* Delivery Address (When shippingType === 'domicilio') */}
         {shippingInfo.shippingType === 'domicilio' && (
           <div className="sm:col-span-2">
-            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
               Dirección Exacta de Entrega a Domicilio <span className="text-red-500">*</span>
             </label>
             <textarea
@@ -760,14 +760,14 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
               placeholder="Ej: Sector Centro, Calle Bolívar cruce con Ayacucho, Casa #14, Punto de ref: Frente a la plaza / bodegón..."
               value={shippingInfo.agencyOrAddress}
               onChange={(e) => handleChange('agencyOrAddress', e.target.value)}
-              className={`w-full p-2 bg-white border rounded-xl text-xs outline-none transition-colors ${
+              className={`w-full p-2 bg-white dark:bg-slate-900 border rounded-xl text-xs text-slate-900 dark:text-slate-100 outline-none transition-colors ${
                 errors.agencyOrAddress
-                  ? 'border-red-500 bg-red-50/50'
-                  : 'border-slate-300 focus:border-red-500'
+                  ? 'border-red-500 bg-red-50/50 dark:bg-red-950/30'
+                  : 'border-slate-300 dark:border-slate-700 focus:border-red-500'
               }`}
             />
             {errors.agencyOrAddress && (
-              <p className="text-[10px] text-red-600 mt-0.5 flex items-center gap-1 font-medium">
+              <p className="text-[10px] text-red-600 dark:text-red-400 mt-0.5 flex items-center gap-1 font-medium">
                 <AlertCircle className="w-3 h-3 shrink-0" />
                 <span>{errors.agencyOrAddress}</span>
               </p>
@@ -786,8 +786,8 @@ export const MRWShippingForm: React.FC<MRWShippingFormProps> = ({
         onSelectAgency={handleModalAgencySelect}
       />
 
-      <div className="flex items-start gap-1.5 text-[10px] text-slate-500 bg-white p-2 rounded-xl border border-slate-200">
-        <Info className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+      <div className="flex items-start gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-700">
+        <Info className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0 mt-0.5" />
         <span>
           Datos verificados con el directorio oficial de <strong>MRW Venezuela</strong> (mrwve.com). Se enviarán en formato de guía para procesar tu envío de inmediato.
         </span>

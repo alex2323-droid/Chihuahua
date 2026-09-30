@@ -72,19 +72,19 @@ export const LegalModals: React.FC<LegalModalsProps> = ({
       aria-labelledby="legal-modal-title"
       className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200 no-print"
     >
-      <div className="bg-white w-full max-w-3xl max-h-[90vh] rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200/80 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-3xl max-h-[90vh] rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200/80 dark:border-slate-800 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="px-5 py-4 sm:px-6 sm:py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+        <div className="px-5 py-4 sm:px-6 sm:py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-850">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
+            <div className="p-2 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 rounded-xl">
               <Scale className="w-5 h-5" />
             </div>
             <div>
-              <h2 id="legal-modal-title" className="font-display font-bold text-base sm:text-lg text-slate-900">
+              <h2 id="legal-modal-title" className="font-display font-bold text-base sm:text-lg text-slate-900 dark:text-white">
                 Centro Legal, Privacidad y Transparencia
               </h2>
-              <p className="text-[11px] sm:text-xs text-slate-500">
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
                 {storeName} • Cumplimiento Normativo y Protección al Consumidor
               </p>
             </div>
@@ -92,14 +92,14 @@ export const LegalModals: React.FC<LegalModalsProps> = ({
           <button
             onClick={onClose}
             aria-label="Cerrar modal legal"
-            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-slate-200 bg-white overflow-x-auto px-4 sm:px-6 scrollbar-none gap-1 sm:gap-2">
+        <div className="flex border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-x-auto px-4 sm:px-6 scrollbar-none gap-1 sm:gap-2">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -107,13 +107,13 @@ export const LegalModals: React.FC<LegalModalsProps> = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-3 px-3 sm:px-4 text-xs font-semibold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap focus:outline-none focus:text-emerald-700 ${
+                className={`py-3 px-3 sm:px-4 text-xs font-semibold flex items-center gap-1.5 border-b-2 transition-all whitespace-nowrap focus:outline-none cursor-pointer ${
                   isActive
-                    ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50'
-                    : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
+                    ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/30'
+                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
+                <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`} />
                 <span>{tab.label}</span>
               </button>
             );
@@ -121,22 +121,22 @@ export const LegalModals: React.FC<LegalModalsProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="p-5 sm:p-7 overflow-y-auto space-y-6 text-slate-700 text-xs sm:text-sm leading-relaxed">
+        <div className="p-5 sm:p-7 overflow-y-auto space-y-6 text-slate-700 dark:text-slate-300 text-xs sm:text-sm leading-relaxed">
           
           {/* PRIVACY POLICY */}
           {activeTab === 'privacy' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-emerald-800 font-bold text-base">
-                <Shield className="w-5 h-5 text-emerald-600" />
+              <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-400 font-bold text-base">
+                <Shield className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 <h3>Política de Privacidad y Protección de Datos Personales</h3>
               </div>
-              <p className="text-slate-500 text-xs">
+              <p className="text-slate-500 dark:text-slate-400 text-xs">
                 Última actualización: {new Date().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
               </p>
 
-              <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200/70">
-                <h4 className="font-bold text-slate-900 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="space-y-3 bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200/70 dark:border-slate-700/70">
+                <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   1. Principio de Minimización de Datos ("Solo datos necesarios")
                 </h4>
                 <p>
@@ -145,8 +145,8 @@ export const LegalModals: React.FC<LegalModalsProps> = ({
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-bold text-slate-900">2. Finalidad del Tratamiento</h4>
-                <ul className="list-disc list-inside space-y-1 text-slate-600 pl-1">
+                <h4 className="font-bold text-slate-900 dark:text-white">2. Finalidad del Tratamiento</h4>
+                <ul className="list-disc list-inside space-y-1 text-slate-600 dark:text-slate-300 pl-1">
                   <li>Gestionar y dar seguimiento a los pedidos solicitados a través de WhatsApp.</li>
                   <li>Recordar las preferencias de tu carrito de compras localmente en tu dispositivo.</li>
                   <li>Garantizar la seguridad, integridad y funcionamiento técnico del catálogo digital.</li>
@@ -154,11 +154,11 @@ export const LegalModals: React.FC<LegalModalsProps> = ({
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-bold text-slate-900">3. Integraciones de Terceros</h4>
+                <h4 className="font-bold text-slate-900 dark:text-white">3. Integraciones de Terceros</h4>
                 <p>
                   Para brindar el servicio empleamos únicamente proveedores técnicos reconocidos:
                 </p>
-                <ul className="list-disc list-inside space-y-1 text-slate-600 pl-1">
+                <ul className="list-disc list-inside space-y-1 text-slate-600 dark:text-slate-300 pl-1">
                   <li><strong>WhatsApp / Meta:</strong> Canal directo y cifrado de extremo a extremo para la confirmación de pedidos.</li>
                   <li><strong>Google Cloud & Firebase:</strong> Almacenamiento seguro en la nube para la sincronización de inventario.</li>
                   <li><strong>Supabase & Redis:</strong> Caché de alto rendimiento para acelerar la carga del catálogo.</li>
@@ -166,7 +166,7 @@ export const LegalModals: React.FC<LegalModalsProps> = ({
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-bold text-slate-900">4. Tus Derechos (ARCO / GDPR)</h4>
+                <h4 className="font-bold text-slate-900 dark:text-white">4. Tus Derechos (ARCO / GDPR)</h4>
                 <p>
                   Tienes derecho en todo momento a acceder, rectificar, limitar o solicitar la eliminación total de tus datos de contacto comunicándote a nuestro WhatsApp oficial: <strong>{cleanPhone}</strong>.
                 </p>
@@ -177,44 +177,44 @@ export const LegalModals: React.FC<LegalModalsProps> = ({
           {/* TERMS & CONDITIONS */}
           {activeTab === 'terms' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-emerald-800 font-bold text-base">
-                <FileText className="w-5 h-5 text-emerald-600" />
+              <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-400 font-bold text-base">
+                <FileText className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 <h3>Términos y Condiciones de Uso</h3>
               </div>
-              <p className="text-slate-500 text-xs">
+              <p className="text-slate-500 dark:text-slate-400 text-xs">
                 Vigentes para todos los usuarios y compradores de la plataforma {storeName}.
               </p>
 
               <div className="space-y-3">
-                <h4 className="font-bold text-slate-900">1. Naturaleza del Catálogo Digital</h4>
+                <h4 className="font-bold text-slate-900 dark:text-white">1. Naturaleza del Catálogo Digital</h4>
                 <p>
                   Este sitio web es una vitrina y catálogo interactivo digital operado por <strong>{storeName}</strong>. Los pedidos se completan directamente mediante el canal verificado de WhatsApp del vendedor.
                 </p>
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-bold text-slate-900">2. Precios, Moneda y Disponibilidad</h4>
+                <h4 className="font-bold text-slate-900 dark:text-white">2. Precios, Moneda y Disponibilidad</h4>
                 <p>
                   Todos los precios mostrados están expresados en la moneda oficial configurada ({settings.currencySymbol || '$'}) y se mantienen actualizados en tiempo real. La confirmación final de existencias, colores o tallas se realiza al enviar el pedido por WhatsApp.
                 </p>
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-bold text-slate-900">3. Veracidad Comercial y Transparencia</h4>
+                <h4 className="font-bold text-slate-900 dark:text-white">3. Veracidad Comercial y Transparencia</h4>
                 <p>
                   Nos comprometemos con la honestidad comercial: <strong>no utilizamos reseñas falsas, testimonios inventados ni publicidad engañosa</strong>. Las especificaciones, medidas y fotografías corresponden a los productos reales.
                 </p>
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-bold text-slate-900">4. Propiedad Intelectual y Derechos de Autor</h4>
+                <h4 className="font-bold text-slate-900 dark:text-white">4. Propiedad Intelectual y Derechos de Autor</h4>
                 <p>
                   Todos los logotipos, nombres comerciales, diseños de catálogo y materiales gráficos pertenecen a <strong>{storeName}</strong> o a sus respectivos titulares con derechos de uso concedidos. Queda prohibida la copia no autorizada con fines comerciales.
                 </p>
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-bold text-slate-900">5. Leyes Locales Aplicables</h4>
+                <h4 className="font-bold text-slate-900 dark:text-white">5. Leyes Locales Aplicables</h4>
                 <p>
                   Estos términos se rigen conforme a las leyes de comercio electrónico y normativas de protección al consumidor aplicables en la jurisdicción del comercio.
                 </p>
@@ -225,52 +225,52 @@ export const LegalModals: React.FC<LegalModalsProps> = ({
           {/* COOKIE POLICY */}
           {activeTab === 'cookies' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-emerald-800 font-bold text-base">
-                <Cookie className="w-5 h-5 text-emerald-600" />
+              <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-400 font-bold text-base">
+                <Cookie className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 <h3>Política y Consentimiento de Cookies</h3>
               </div>
-              <p className="text-slate-500 text-xs">
+              <p className="text-slate-500 dark:text-slate-400 text-xs">
                 Información transparente sobre el uso de tecnologías de almacenamiento local en tu navegador.
               </p>
 
-              <div className="bg-emerald-50/70 p-4 rounded-2xl border border-emerald-200/80 text-emerald-900 space-y-2">
+              <div className="bg-emerald-50/70 dark:bg-emerald-950/40 p-4 rounded-2xl border border-emerald-200/80 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs uppercase tracking-wider text-emerald-800">
+                  <span className="font-bold text-xs uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
                     Consentimiento Activo
                   </span>
                   {onOpenCookiePreferences && (
                     <button
                       onClick={onOpenCookiePreferences}
-                      className="text-xs font-bold text-emerald-700 underline hover:text-emerald-900"
+                      className="text-xs font-bold text-emerald-700 dark:text-emerald-400 underline hover:text-emerald-900 dark:hover:text-emerald-300 cursor-pointer"
                     >
                       Configurar Mis Preferencias
                     </button>
                   )}
                 </div>
-                <p className="text-xs text-emerald-800/90">
+                <p className="text-xs text-emerald-800/90 dark:text-emerald-300/90">
                   Respetamos tu privacidad. Puedes aceptar o rechazar cookies no esenciales en cualquier momento.
                 </p>
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-bold text-slate-900">1. ¿Qué son y qué utilizamos?</h4>
+                <h4 className="font-bold text-slate-900 dark:text-white">1. ¿Qué son y qué utilizamos?</h4>
                 <p>
                   Utilizamos almacenamiento local (LocalStorage e IndexedDB) exclusivamente para:
                 </p>
                 <div className="space-y-2 pl-2">
-                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                    <strong className="text-slate-900 block">🟢 Cookies Técnicas y Esenciales (Obligatorias):</strong>
+                  <div className="p-2.5 bg-slate-50 dark:bg-slate-800/70 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+                    <strong className="text-slate-900 dark:text-white block">🟢 Cookies Técnicas y Esenciales (Obligatorias):</strong>
                     Mantienen tu carrito de compras activo, recuerdan tu sesión segura y cargan instantáneamente las fotos del catálogo.
                   </div>
-                  <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-                    <strong className="text-slate-900 block">🔵 Cookies de Rendimiento y Analítica (Opcionales):</strong>
+                  <div className="p-2.5 bg-slate-50 dark:bg-slate-800/70 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+                    <strong className="text-slate-900 dark:text-white block">🔵 Cookies de Rendimiento y Analítica (Opcionales):</strong>
                     Nos permiten saber qué productos son más populares para mejorar el catálogo, sin recopilar datos personales identificables.
                   </div>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <h4 className="font-bold text-slate-900">2. Control y Eliminación</h4>
+                <h4 className="font-bold text-slate-900 dark:text-white">2. Control y Eliminación</h4>
                 <p>
                   Puedes limpiar el almacenamiento de tu navegador en cualquier momento desde los ajustes de tu explorador web o mediante nuestro panel de preferencias de cookies.
                 </p>
@@ -281,38 +281,38 @@ export const LegalModals: React.FC<LegalModalsProps> = ({
           {/* REFUND POLICY */}
           {activeTab === 'refunds' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-emerald-800 font-bold text-base">
-                <RotateCcw className="w-5 h-5 text-emerald-600" />
+              <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-400 font-bold text-base">
+                <RotateCcw className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 <h3>Política de Devoluciones, Cambios y Garantía</h3>
               </div>
-              <p className="text-slate-500 text-xs">
+              <p className="text-slate-500 dark:text-slate-400 text-xs">
                 Garantizamos tu tranquilidad y satisfacción en cada compra.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
-                  <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/70 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-1.5">
+                  <div className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     Garantía por Defecto
                   </div>
-                  <p className="text-xs text-slate-600">
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
                     Si un artículo presenta algún defecto de fábrica o daño en transporte, se realiza cambio inmediato o reembolso sin costo adicional.
                   </p>
                 </div>
-                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
-                  <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/70 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-1.5">
+                  <div className="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     Cambio de Talla o Modelo
                   </div>
-                  <p className="text-xs text-slate-600">
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
                     Sujeto a disponibilidad en inventario. El producto debe estar nuevo, sin uso y con sus etiquetas originales.
                   </p>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-bold text-slate-900">¿Cómo solicitar una devolución o cambio?</h4>
-                <ol className="list-decimal list-inside space-y-1.5 text-slate-600 pl-1">
+                <h4 className="font-bold text-slate-900 dark:text-white">¿Cómo solicitar una devolución o cambio?</h4>
+                <ol className="list-decimal list-inside space-y-1.5 text-slate-600 dark:text-slate-300 pl-1">
                   <li>Escribe a nuestro WhatsApp de atención: <strong>{cleanPhone}</strong>.</li>
                   <li>Envía una foto o video breve del artículo y tu número de pedido o recibo.</li>
                   <li>Nuestro equipo te coordinará la entrega del reemplazo o la devolución del monto acordado.</li>
@@ -324,41 +324,41 @@ export const LegalModals: React.FC<LegalModalsProps> = ({
           {/* BUSINESS INFO & IDENTITY */}
           {activeTab === 'business' && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-emerald-800 font-bold text-base">
-                <Building2 className="w-5 h-5 text-emerald-600" />
+              <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-400 font-bold text-base">
+                <Building2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 <h3>Identificación del Negocio y Contacto Oficial</h3>
               </div>
-              <p className="text-slate-500 text-xs">
+              <p className="text-slate-500 dark:text-slate-400 text-xs">
                 Información oficial del establecimiento comercial conforme a las normativas de transparencia y protección al consumidor.
               </p>
 
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+              <div className="bg-slate-50 dark:bg-slate-800/70 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div>
-                    <span className="text-slate-400 block font-semibold">Nombre Comercial:</span>
-                    <span className="font-bold text-slate-900 text-sm">{storeName}</span>
+                    <span className="text-slate-400 dark:text-slate-500 block font-semibold">Nombre Comercial:</span>
+                    <span className="font-bold text-slate-900 dark:text-white text-sm">{storeName}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block font-semibold">Canal Oficial de WhatsApp:</span>
-                    <span className="font-bold text-emerald-700 text-sm">{cleanPhone}</span>
+                    <span className="text-slate-400 dark:text-slate-500 block font-semibold">Canal Oficial de WhatsApp:</span>
+                    <span className="font-bold text-emerald-700 dark:text-emerald-400 text-sm">{cleanPhone}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block font-semibold">Horario de Atención:</span>
-                    <span className="font-medium text-slate-800">Lunes a Sábado: 8:00 AM - 8:00 PM</span>
+                    <span className="text-slate-400 dark:text-slate-500 block font-semibold">Horario de Atención:</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-200">Lunes a Sábado: 8:00 AM - 8:00 PM</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block font-semibold">Soporte y Reclamaciones:</span>
-                    <span className="font-medium text-slate-800">Directo vía WhatsApp</span>
+                    <span className="text-slate-400 dark:text-slate-500 block font-semibold">Soporte y Reclamaciones:</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-200">Directo vía WhatsApp</span>
                   </div>
                 </div>
               </div>
 
-              <div className="p-3.5 bg-blue-50 border border-blue-200/80 rounded-2xl text-blue-900 text-xs space-y-1">
+              <div className="p-3.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/60 rounded-2xl text-blue-900 dark:text-blue-300 text-xs space-y-1">
                 <div className="font-bold flex items-center gap-1.5">
-                  <Lock className="w-4 h-4 text-blue-600" />
+                  <Lock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                   Seguridad y Accesibilidad Web (WCAG 2.1 AA)
                 </div>
-                <p className="text-blue-800/90 leading-relaxed">
+                <p className="text-blue-800/90 dark:text-blue-300/90 leading-relaxed">
                   Este sitio web cuenta con diseño accesible, navegación completa por teclado, textos alternativos descriptivos en imágenes y alto contraste de color para garantizar la inclusión y la mejor experiencia de usuario.
                 </p>
               </div>
@@ -368,14 +368,14 @@ export const LegalModals: React.FC<LegalModalsProps> = ({
         </div>
 
         {/* Footer actions */}
-        <div className="px-5 py-4 sm:px-6 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
-            <Shield className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+        <div className="px-5 py-4 sm:px-6 bg-slate-50 dark:bg-slate-850 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+            <Shield className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span>© {currentYear} {storeName}. Todos los derechos reservados.</span>
           </div>
           <button
             onClick={onClose}
-            className="w-full sm:w-auto px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full sm:w-auto px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
           >
             Entendido y Aceptar
           </button>

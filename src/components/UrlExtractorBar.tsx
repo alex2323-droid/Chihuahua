@@ -400,43 +400,45 @@ export const UrlExtractorBar: React.FC<UrlExtractorBarProps> = ({
       onDragOver={(e) => e.preventDefault()}
       onDrop={handleDrop}
     >
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-slate-100 relative animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-slate-100 dark:border-slate-800 relative animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-              <Sparkles className="w-5 h-5 text-emerald-600" />
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
-              <h2 className="font-display font-bold text-lg text-slate-900 leading-snug">
+              <h2 className="font-display font-bold text-lg text-slate-900 dark:text-white leading-snug">
                 Agregar Producto con IA
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Pega una URL, sube una Captura de Pantalla o procesa varias tiendas
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-sm font-medium p-1 hover:bg-slate-100 rounded-lg transition-colors"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-medium p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
           >
             ✕
           </button>
         </div>
 
         {/* Toggle Mode Tabs */}
-        <div className="flex items-center gap-1.5 mb-5 p-1 bg-slate-100 rounded-xl">
+        <div className="flex items-center gap-1.5 mb-5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
           <button
             onClick={() => {
               setActiveTab('single');
               setError(null);
             }}
-            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === 'single' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              activeTab === 'single'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
-            <Link2 className="w-3.5 h-3.5 text-emerald-600" />
+            <Link2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>Por URL</span>
           </button>
 
@@ -445,11 +447,13 @@ export const UrlExtractorBar: React.FC<UrlExtractorBarProps> = ({
               setActiveTab('screenshot');
               setError(null);
             }}
-            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === 'screenshot' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              activeTab === 'screenshot'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
-            <Camera className="w-3.5 h-3.5 text-purple-600" />
+            <Camera className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
             <span>Por Captura de Pantalla</span>
           </button>
 
@@ -458,11 +462,13 @@ export const UrlExtractorBar: React.FC<UrlExtractorBarProps> = ({
               setActiveTab('bulk');
               setError(null);
             }}
-            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === 'bulk' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              activeTab === 'bulk'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
-            <Layers className="w-3.5 h-3.5 text-blue-600" />
+            <Layers className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
             <span>Lote de URLs</span>
           </button>
         </div>
@@ -481,12 +487,12 @@ export const UrlExtractorBar: React.FC<UrlExtractorBarProps> = ({
                 }}
                 onKeyDown={(e) => e.key === 'Enter' && handleExtractSingle()}
                 disabled={loading}
-                className="w-full pr-28 pl-4 py-3 bg-slate-50 border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all"
+                className="w-full pr-28 pl-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:focus:ring-emerald-900/40 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none transition-all"
               />
               <button
                 type="button"
                 onClick={handlePasteFromClipboard}
-                className="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1.5 text-xs font-medium text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors flex items-center gap-1"
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
               >
                 <Copy className="w-3 h-3" />
                 <span>Pegar</span>
@@ -495,7 +501,7 @@ export const UrlExtractorBar: React.FC<UrlExtractorBarProps> = ({
 
             {/* Quick Test Samples */}
             <div>
-              <span className="text-[11px] font-medium text-slate-400 block mb-1.5 uppercase tracking-wider">
+              <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 block mb-1.5 uppercase tracking-wider">
                 O prueba con una tienda de ejemplo:
               </span>
               <div className="flex flex-wrap gap-1.5">
@@ -508,7 +514,7 @@ export const UrlExtractorBar: React.FC<UrlExtractorBarProps> = ({
                       handleExtractSingle(s.url);
                     }}
                     disabled={loading}
-                    className="text-xs px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 text-slate-700 rounded-lg border border-slate-200/80 transition-colors flex items-center gap-1"
+                    className="text-xs px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-800 dark:hover:text-emerald-300 text-slate-700 dark:text-slate-300 rounded-lg border border-slate-200/80 dark:border-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
                   >
                     <span>{s.label}</span>
                     <ArrowRight className="w-3 h-3 opacity-60" />
@@ -533,15 +539,15 @@ export const UrlExtractorBar: React.FC<UrlExtractorBarProps> = ({
             {!screenshotBase64 ? (
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-slate-300 hover:border-purple-500 bg-slate-50 hover:bg-purple-50/50 rounded-2xl p-8 text-center cursor-pointer transition-all group"
+                className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-purple-500 dark:hover:border-purple-500 bg-slate-50 dark:bg-slate-800/50 hover:bg-purple-50/50 dark:hover:bg-purple-950/20 rounded-2xl p-8 text-center cursor-pointer transition-all group"
               >
-                <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                <div className="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
                   <UploadCloud className="w-6 h-6" />
                 </div>
-                <h3 className="font-semibold text-sm text-slate-900 mb-1">
+                <h3 className="font-semibold text-sm text-slate-900 dark:text-white mb-1">
                   Arrastra tu captura de pantalla aquí o haz clic para buscar
                 </h3>
-                <p className="text-xs text-slate-500 mb-4 max-w-xs mx-auto">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 max-w-xs mx-auto">
                   Sube cualquier captura de la publicación, tienda o catálogo. La IA detectará título, precio y foto.
                 </p>
 
@@ -552,9 +558,9 @@ export const UrlExtractorBar: React.FC<UrlExtractorBarProps> = ({
                       e.stopPropagation();
                       handlePasteFromClipboard();
                     }}
-                    className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-100 shadow-2xs transition-colors flex items-center gap-1.5"
+                    className="px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
-                    <Copy className="w-3.5 h-3.5 text-purple-600" />
+                    <Copy className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
                     <span>Pegar desde Portapapeles (Ctrl+V)</span>
                   </button>
                 </div>
@@ -588,7 +594,7 @@ export const UrlExtractorBar: React.FC<UrlExtractorBarProps> = ({
                     setScreenshotBase64(null);
                     setScreenshotName('');
                   }}
-                  className="p-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors shrink-0"
+                  className="p-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors shrink-0 cursor-pointer"
                   title="Eliminar captura"
                 >
                   <X className="w-4 h-4" />
@@ -610,9 +616,9 @@ export const UrlExtractorBar: React.FC<UrlExtractorBarProps> = ({
                 setError(null);
               }}
               disabled={loading}
-              className="w-full p-3 bg-slate-50 border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 outline-none transition-all font-mono"
+              className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:focus:ring-emerald-900/40 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none transition-all font-mono"
             />
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
               Soporta hasta 5 URLs en simultáneo. Se extraerán automáticamente fotos reales HD, títulos y precios.
             </p>
           </div>
@@ -620,11 +626,11 @@ export const UrlExtractorBar: React.FC<UrlExtractorBarProps> = ({
 
         {/* Loading Progress State */}
         {loading && (
-          <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3">
-            <Loader2 className="w-5 h-5 text-emerald-600 animate-spin shrink-0" />
+          <div className="mt-4 p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/60 rounded-xl flex items-center gap-3">
+            <Loader2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 animate-spin shrink-0" />
             <div>
-              <p className="text-xs font-semibold text-emerald-900">{stepMessage}</p>
-              <p className="text-[11px] text-emerald-700">
+              <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">{stepMessage}</p>
+              <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
                 Procesando datos con Inteligencia Artificial Multimodal...
               </p>
             </div>
@@ -633,9 +639,9 @@ export const UrlExtractorBar: React.FC<UrlExtractorBarProps> = ({
 
         {/* Error message */}
         {error && (
-          <div className="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5">
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-            <div className="text-xs text-rose-800 leading-snug">
+          <div className="mt-4 p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 rounded-xl flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+            <div className="text-xs text-rose-800 dark:text-rose-300 leading-snug">
               <span className="font-semibold block mb-0.5">Atención:</span>
               {error}
             </div>
@@ -643,8 +649,8 @@ export const UrlExtractorBar: React.FC<UrlExtractorBarProps> = ({
         )}
 
         {/* Action Buttons */}
-        <div className="mt-6 flex items-center justify-between pt-3 border-t border-slate-100">
-          <div className="flex items-center gap-1 text-[11px] text-slate-400">
+        <div className="mt-6 flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500">
             <HelpCircle className="w-3.5 h-3.5" />
             <span>También puedes ingresar productos manualmente</span>
           </div>
@@ -654,7 +660,7 @@ export const UrlExtractorBar: React.FC<UrlExtractorBarProps> = ({
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-xl transition-colors"
+              className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 rounded-xl transition-colors cursor-pointer"
             >
               Cancelar
             </button>
@@ -664,7 +670,7 @@ export const UrlExtractorBar: React.FC<UrlExtractorBarProps> = ({
                 type="button"
                 onClick={() => handleExtractSingle()}
                 disabled={loading}
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 disabled:opacity-50"
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 {loading ? (
                   <>
@@ -685,7 +691,7 @@ export const UrlExtractorBar: React.FC<UrlExtractorBarProps> = ({
                 type="button"
                 onClick={handleAnalyzeScreenshot}
                 disabled={loading || !screenshotBase64}
-                className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 disabled:opacity-50"
+                className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 {loading ? (
                   <>
@@ -706,7 +712,7 @@ export const UrlExtractorBar: React.FC<UrlExtractorBarProps> = ({
                 type="button"
                 onClick={handleExtractBatch}
                 disabled={loading}
-                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 disabled:opacity-50"
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 {loading ? (
                   <>

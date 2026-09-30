@@ -131,7 +131,7 @@ export const CustomerProfileModal: React.FC<CustomerProfileModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 no-print overflow-y-auto">
-      <div className="bg-white max-w-lg w-full rounded-3xl shadow-2xl border border-slate-100 overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+      <div className="bg-white dark:bg-slate-900 max-w-lg w-full rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden my-auto animate-in zoom-in-95 duration-200">
         
         {/* Modal Header */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-sky-700 via-sky-800 to-indigo-900 text-white relative">
@@ -167,18 +167,18 @@ export const CustomerProfileModal: React.FC<CustomerProfileModalProps> = ({
         <form onSubmit={handleSaveProfile} className="p-4 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto">
           {savedSuccess ? (
             <div className="py-10 text-center space-y-3">
-              <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center animate-bounce">
+              <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center animate-bounce">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
-              <h3 className="text-base font-bold text-slate-900">¡Perfil Guardado Exitosamente!</h3>
-              <p className="text-xs text-slate-600 max-w-xs mx-auto">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">¡Perfil Guardado Exitosamente!</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-300 max-w-xs mx-auto">
                 Tus datos de contacto y dirección MRW han quedado guardados. Todos tus próximos pedidos y encargos usarán esta información automáticamente.
               </p>
             </div>
           ) : (
             <>
-              <div className="bg-sky-50 border border-sky-200/80 p-3 rounded-2xl text-xs text-sky-900 flex items-start gap-2">
-                <Sparkles className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
+              <div className="bg-sky-50 dark:bg-sky-950/40 border border-sky-200/80 dark:border-sky-900/60 p-3 rounded-2xl text-xs text-sky-900 dark:text-sky-200 flex items-start gap-2">
+                <Sparkles className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0 mt-0.5" />
                 <div>
                   <strong>Dirección Sincronizada:</strong> Cuando hagas una compra en el carrito o solicites un encargo especial, no tendrás que escribir tus datos nuevamente.
                 </div>
@@ -192,19 +192,19 @@ export const CustomerProfileModal: React.FC<CustomerProfileModalProps> = ({
               />
 
               {/* Privacy note */}
-              <div className="flex items-center gap-2 text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-                <Lock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
+                <Lock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span>
                   Tus datos se almacenan de forma segura para tus guías de envío MRW.
                 </span>
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2.5 border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                  className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold text-xs rounded-xl transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>

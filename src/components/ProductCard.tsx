@@ -63,15 +63,18 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
 
   const [imgSrc, setImgSrc] = useState(initialImg);
   const [imgError, setImgError] = useState(false);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   // Sync image state if product prop changes
   React.useEffect(() => {
     const fresh = resolveRealImage(product);
     setImgSrc(fresh);
     setImgError(false);
+    setIsImageLoaded(false);
   }, [product.image, product.title, product.description, product.imageDetails, product.images]);
 
   const handleImageError = () => {
+    setIsImageLoaded(true);
     const fallback = getCategoryFallbackImage(`${product.title} ${product.description}`);
     // If direct image fails, attempt loading via proxy route before showing fallback
     if (
@@ -151,12 +154,24 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
           }`}
         >
           {!imgError && imgSrc && imgSrc.trim() !== '' ? (
-            <img
-              src={imgSrc}
-              alt={product.title}
-              onError={handleImageError}
-              className="w-full h-full object-cover group-hover/img:scale-105 transition-all duration-300"
-            />
+            <>
+              {!isImageLoaded && (
+                <div className={`absolute inset-0 skeleton-shimmer flex items-center justify-center z-1 ${
+                  isDark ? 'bg-slate-900' : 'bg-slate-100'
+                }`}>
+                  <Tag className="w-5 h-5 text-slate-300 dark:text-slate-600 opacity-40 animate-pulse" />
+                </div>
+              )}
+              <img
+                src={imgSrc}
+                alt={product.title}
+                onLoad={() => setIsImageLoaded(true)}
+                onError={handleImageError}
+                className={`w-full h-full object-cover group-hover/img:scale-105 transition-all duration-300 ${
+                  isImageLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
+              />
+            </>
           ) : (
             <div className={`w-full h-full flex flex-col items-center justify-center text-xs text-center p-2 ${
               isDark ? 'bg-slate-950 text-slate-500' : 'bg-slate-100 text-slate-400'
@@ -317,12 +332,24 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
           }`}
         >
           {!imgError && imgSrc && imgSrc.trim() !== '' ? (
-            <img
-              src={imgSrc}
-              alt={product.title}
-              onError={handleImageError}
-              className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500 ease-out"
-            />
+            <>
+              {!isImageLoaded && (
+                <div className={`absolute inset-0 skeleton-shimmer flex items-center justify-center z-1 ${
+                  isDark ? 'bg-slate-900' : 'bg-slate-100'
+                }`}>
+                  <Tag className="w-8 h-8 text-slate-300 dark:text-slate-600 opacity-40 animate-pulse" />
+                </div>
+              )}
+              <img
+                src={imgSrc}
+                alt={product.title}
+                onLoad={() => setIsImageLoaded(true)}
+                onError={handleImageError}
+                className={`w-full h-full object-cover group-hover:scale-103 transition-transform duration-500 ease-out ${
+                  isImageLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
+              />
+            </>
           ) : (
             <div className={`w-full h-full flex flex-col items-center justify-center p-8 text-center ${
               isDark ? 'bg-slate-950 text-slate-500' : 'bg-slate-100 text-slate-400'
@@ -536,12 +563,24 @@ const ProductCardBase: React.FC<ProductCardProps> = ({
         }`}
       >
         {!imgError && imgSrc && imgSrc.trim() !== '' ? (
-          <img
-            src={imgSrc}
-            alt={product.title}
-            onError={handleImageError}
-            className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300"
-          />
+          <>
+            {!isImageLoaded && (
+              <div className={`absolute inset-0 skeleton-shimmer flex items-center justify-center z-1 ${
+                isDark ? 'bg-slate-900' : 'bg-slate-100'
+              }`}>
+                <Tag className="w-6 h-6 text-slate-300 dark:text-slate-600 opacity-40 animate-pulse" />
+              </div>
+            )}
+            <img
+              src={imgSrc}
+              alt={product.title}
+              onLoad={() => setIsImageLoaded(true)}
+              onError={handleImageError}
+              className={`w-full h-full object-cover group-hover:scale-105 transition-all duration-300 ${
+                isImageLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
+            />
+          </>
         ) : (
           <div className={`w-full h-full flex flex-col items-center justify-center p-4 text-center ${
             isDark ? 'bg-slate-950 text-slate-500' : 'bg-slate-100 text-slate-400'

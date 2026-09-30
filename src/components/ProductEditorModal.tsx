@@ -451,16 +451,16 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full p-6 border border-slate-100 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-xl w-full p-6 border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
         
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-          <h2 className="font-display font-bold text-lg text-slate-900">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
+          <h2 className="font-display font-bold text-lg text-slate-900 dark:text-white">
             {product ? 'Editar Producto' : 'Crear Producto Manual'}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-sm font-medium p-1 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-medium p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -471,7 +471,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
           {/* Title & SKU */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div className="sm:col-span-3">
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Nombre del Producto *
               </label>
               <input
@@ -480,11 +480,11 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                 value={formData.title || ''}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="Ej: Zapatillas Urban Minimalist"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:focus:ring-emerald-900/40"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Código Único *
               </label>
               <input
@@ -493,7 +493,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                 value={formData.sku || ''}
                 onChange={(e) => setFormData({ ...formData, sku: e.target.value.trim().toUpperCase() })}
                 placeholder="Ej: CH-4819"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 font-mono font-bold text-emerald-700"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:focus:ring-emerald-900/40 font-mono font-bold text-emerald-700 dark:text-emerald-400"
               />
             </div>
           </div>
@@ -501,13 +501,13 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
           {/* Price & Discount */}
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Moneda
               </label>
               <select
                 value={formData.currency || '$'}
                 onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm outline-none cursor-pointer"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 outline-none cursor-pointer"
               >
                 <option value="$">$ (USD / MXN / COP)</option>
                 <option value="€">€ (EUR)</option>
@@ -518,7 +518,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Precio Actual *
               </label>
               <input
@@ -528,12 +528,12 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                 value={formData.price !== undefined && formData.price !== null ? formData.price : ''}
                 onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
                 placeholder="29.99"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm outline-none focus:border-emerald-500"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-emerald-500 font-semibold"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Precio Anterior (Opcional)
               </label>
               <input
@@ -547,7 +547,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                   })
                 }
                 placeholder="39.99"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm outline-none"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 outline-none"
               />
             </div>
           </div>
@@ -555,7 +555,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
           {/* Category, Brand, Badge */}
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Categoría
               </label>
               <input
@@ -563,12 +563,12 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                 value={formData.category || ''}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 placeholder="Ej: Calzado"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm outline-none"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Marca / Tienda
               </label>
               <input
@@ -576,18 +576,18 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                 value={formData.brand || ''}
                 onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                 placeholder="Ej: Nike"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm outline-none"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Etiqueta / Badge
               </label>
               <select
                 value={formData.badge || ''}
                 onChange={(e) => setFormData({ ...formData, badge: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm outline-none cursor-pointer"
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 outline-none cursor-pointer"
               >
                 <option value="">Sin Etiqueta</option>
                 <option value="NUEVO">NUEVO</option>
@@ -600,10 +600,10 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
           </div>
 
           {/* Tallas / Medidas y Precios por Talla */}
-          <div className="bg-purple-50/50 border border-purple-200/80 p-4 rounded-2xl space-y-3">
+          <div className="bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200/80 dark:border-purple-900/60 p-4 rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold text-purple-950 flex items-center gap-1.5">
-                <Ruler className="w-4 h-4 text-purple-600" />
+              <label className="block text-xs font-bold text-purple-950 dark:text-purple-300 flex items-center gap-1.5">
+                <Ruler className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                 <span>Tallas, Medidas y Precios por Talla</span>
               </label>
 
@@ -620,7 +620,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                 className={`px-3 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                   useCustomVariantPrices
                     ? 'bg-purple-700 text-white shadow-2xs'
-                    : 'bg-white text-purple-800 border border-purple-300 hover:bg-purple-100/60'
+                    : 'bg-white dark:bg-slate-800 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-700 hover:bg-purple-100/60 dark:hover:bg-purple-900/30'
                 }`}
               >
                 <DollarSign className="w-3.5 h-3.5" />
@@ -632,27 +632,27 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
             {!useCustomVariantPrices && (
               <div>
                 <div className="flex items-center justify-between mb-1 text-[11px]">
-                  <span className="text-slate-600 font-medium">Tallas disponibles (Mismo precio)</span>
+                  <span className="text-slate-600 dark:text-slate-400 font-medium">Tallas disponibles (Mismo precio)</span>
                   <div className="flex items-center gap-1">
-                    <span className="text-slate-400">Plantillas:</span>
+                    <span className="text-slate-400 dark:text-slate-500">Plantillas:</span>
                     <button
                       type="button"
                       onClick={() => handlePresetSizes('S, M, L, XL')}
-                      className="px-1.5 py-0.5 bg-white border border-purple-200 text-purple-700 hover:bg-purple-100 rounded font-bold cursor-pointer"
+                      className="px-1.5 py-0.5 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/40 rounded font-bold cursor-pointer"
                     >
                       Ropa (S,M,L,XL)
                     </button>
                     <button
                       type="button"
                       onClick={() => handlePresetSizes('37, 38, 39, 40, 41, 42, 43')}
-                      className="px-1.5 py-0.5 bg-white border border-purple-200 text-purple-700 hover:bg-purple-100 rounded font-bold cursor-pointer"
+                      className="px-1.5 py-0.5 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/40 rounded font-bold cursor-pointer"
                     >
                       Calzado (37-43)
                     </button>
                     <button
                       type="button"
                       onClick={() => handlePresetSizes('Talla Única')}
-                      className="px-1.5 py-0.5 bg-white border border-purple-200 text-purple-700 hover:bg-purple-100 rounded font-bold cursor-pointer"
+                      className="px-1.5 py-0.5 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/40 rounded font-bold cursor-pointer"
                     >
                       Única
                     </button>
@@ -663,7 +663,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                   value={formData.sizes || ''}
                   onChange={(e) => setFormData({ ...formData, sizes: e.target.value })}
                   placeholder="Ej: S, M, L, XL  ó  38, 39, 40, 41, 42  ó  Única"
-                  className="w-full px-3 py-2 bg-white border border-purple-200 rounded-xl text-xs outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800 rounded-xl text-xs text-slate-900 dark:text-slate-100 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-900/40"
                 />
               </div>
             )}
@@ -672,14 +672,14 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
             {useCustomVariantPrices && (
               <div className="space-y-2.5 pt-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-purple-900">
+                  <span className="text-xs font-semibold text-purple-900 dark:text-purple-300">
                     Define cada talla con su precio específico:
                   </span>
                   {formData.sizes && variantsList.length === 0 && (
                     <button
                       type="button"
                       onClick={handleAutoGenerateVariantsFromSizes}
-                      className="text-[11px] text-purple-700 font-bold hover:underline cursor-pointer"
+                      className="text-[11px] text-purple-700 dark:text-purple-400 font-bold hover:underline cursor-pointer"
                     >
                       ⚡ Generar desde "{formData.sizes}"
                     </button>
@@ -690,47 +690,47 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                   {variantsList.map((variant, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center gap-2 p-2 bg-white border border-purple-200 rounded-xl shadow-2xs"
+                      className="flex items-center gap-2 p-2 bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-800/80 rounded-xl shadow-2xs"
                     >
                       <div className="flex-1">
-                        <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Talla / Nombre</label>
+                        <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">Talla / Nombre</label>
                         <input
                           type="text"
                           value={variant?.size || ''}
                           onChange={(e) => handleUpdateVariantRow(idx, 'size', e.target.value)}
                           placeholder="Ej: S, 38, 1 Litro..."
-                          className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs outline-none font-bold text-slate-900"
+                          className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs outline-none font-bold text-slate-900 dark:text-slate-100"
                         />
                       </div>
 
                       <div className="w-28">
-                        <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Precio ($)</label>
+                        <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">Precio ($)</label>
                         <input
                           type="number"
                           step="0.01"
                           value={variant?.price !== undefined && variant?.price !== null ? variant.price : ''}
                           onChange={(e) => handleUpdateVariantRow(idx, 'price', parseFloat(e.target.value) || 0)}
                           placeholder="29.99"
-                          className="w-full px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs outline-none font-bold text-emerald-700"
+                          className="w-full px-2 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs outline-none font-bold text-emerald-700 dark:text-emerald-400"
                         />
                       </div>
 
                       <div className="w-28">
-                        <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Antes ($) Opc</label>
+                        <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">Antes ($) Opc</label>
                         <input
                           type="number"
                           step="0.01"
                           value={variant?.originalPrice !== null && variant?.originalPrice !== undefined ? variant.originalPrice : ''}
                           onChange={(e) => handleUpdateVariantRow(idx, 'originalPrice', e.target.value ? parseFloat(e.target.value) : null)}
                           placeholder="39.99"
-                          className="w-full px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs outline-none font-medium text-slate-400"
+                          className="w-full px-2 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs outline-none font-medium text-slate-400 dark:text-slate-500"
                         />
                       </div>
 
                       <button
                         type="button"
                         onClick={() => handleRemoveVariantRow(idx)}
-                        className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors shrink-0 mt-3 cursor-pointer"
+                        className="p-2 text-rose-500 hover:text-rose-700 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors shrink-0 mt-3 cursor-pointer"
                         title="Eliminar esta talla"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -742,7 +742,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                 <button
                   type="button"
                   onClick={handleAddVariantRow}
-                  className="w-full py-2 bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="w-full py-2 bg-purple-100 dark:bg-purple-900/40 hover:bg-purple-200 dark:hover:bg-purple-900/60 text-purple-900 dark:text-purple-300 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Agregar Otra Talla con Precio Especial</span>
@@ -752,9 +752,9 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
           </div>
 
           {/* Multi-Image Gallery Manager */}
-          <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-3">
+          <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 p-4 rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold text-slate-800">
+              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
                 Galería de Imágenes del Producto ({imageList.length}/{MAX_GALLERY_IMAGES})
               </label>
               <label className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl cursor-pointer transition-colors flex items-center gap-1.5 shadow-2xs">
@@ -776,7 +776,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                 type="text"
                 id="urlAddInput"
                 placeholder="O pega un enlace de imagen https:// y presiona agregar..."
-                className="flex-1 px-3 py-1.5 bg-white border border-slate-300 rounded-xl text-xs outline-none"
+                className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 outline-none"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -794,7 +794,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                     el.value = '';
                   }
                 }}
-                className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-bold text-xs rounded-xl transition-colors cursor-pointer"
               >
                 Agregar URL
               </button>
@@ -806,14 +806,14 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                 {imageList.map((imgUrl, idx) => (
                   <div
                     key={idx}
-                    className={`relative rounded-xl overflow-hidden border-2 aspect-square bg-white group ${
-                      idx === 0 ? 'border-emerald-500 shadow-sm' : 'border-slate-200 opacity-80 hover:opacity-100'
+                    className={`relative rounded-xl overflow-hidden border-2 aspect-square bg-white dark:bg-slate-900 group ${
+                      idx === 0 ? 'border-emerald-500 shadow-sm' : 'border-slate-200 dark:border-slate-700 opacity-80 hover:opacity-100'
                     }`}
                   >
                     {imgUrl && typeof imgUrl === 'string' && imgUrl.trim() !== '' ? (
                       <img src={imgUrl} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400 text-xs">Sin foto</div>
+                      <div className="w-full h-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 text-xs">Sin foto</div>
                     )}
                     
                     {/* Badge */}
@@ -846,18 +846,18 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                 ))}
               </div>
             ) : (
-              <div className="p-4 border border-dashed border-slate-300 rounded-xl text-center text-xs text-slate-400">
+              <div className="p-4 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl text-center text-xs text-slate-400">
                 Aún no has agregado fotos. Sube imágenes desde tu teléfono o PC.
               </div>
             )}
 
             {/* Custom Prices and Codes for Images Section */}
             {imageList.length > 0 && (
-              <div className="pt-3 border-t border-slate-200 space-y-2">
-                <span className="text-[11px] font-bold text-slate-700 block uppercase tracking-wider">
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-700 space-y-2">
+                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block uppercase tracking-wider">
                   Precios y Sub-Códigos por Imagen (Opcional):
                 </span>
-                <p className="text-[10px] text-slate-500 leading-relaxed">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
                   Si dejas el precio vacío, se usará el precio base del producto. El sub-código ayudará a identificar la foto seleccionada en los pedidos de WhatsApp (ej: "ROJO", "AZUL", "MODELO A").
                 </p>
                 <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
@@ -868,16 +868,16 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                       code: generateSubCode(),
                     };
                     return (
-                      <div key={idx} className="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-xl shadow-3xs">
-                        <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-slate-100 bg-slate-50">
+                      <div key={idx} className="flex items-center gap-2 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-3xs">
+                        <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
                           {detail?.url && typeof detail.url === 'string' && detail.url.trim() !== '' ? (
                             <img src={detail.url} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-slate-400 text-[10px]">No</div>
                           )}
                         </div>
-                        <div className="text-[11px] font-bold text-slate-600 w-12 truncate">
-                          Foto #{idx + 1} {idx === 0 && <span className="text-emerald-600 block text-[9px]">(Principal)</span>}
+                        <div className="text-[11px] font-bold text-slate-600 dark:text-slate-300 w-12 truncate">
+                          Foto #{idx + 1} {idx === 0 && <span className="text-emerald-600 dark:text-emerald-400 block text-[9px]">(Principal)</span>}
                         </div>
                         <div className="flex-1 flex items-center gap-1">
                           <input
@@ -895,7 +895,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                                 return [...currentSafe, { url: imgUrl, price: null, code: val }];
                               });
                             }}
-                            className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs outline-none focus:border-emerald-500 font-mono font-bold text-slate-800"
+                            className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-emerald-500 font-mono font-bold text-slate-800 dark:text-slate-100"
                           />
                           <button
                             type="button"
@@ -910,7 +910,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                                 return [...currentSafe, { url: imgUrl, price: null, code: newCode }];
                               });
                             }}
-                            className="p-1 text-slate-400 hover:text-emerald-600 rounded-md hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
+                            className="p-1 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shrink-0 cursor-pointer"
                             title="Generar nuevo sub-código aleatorio"
                           >
                             <RefreshCw className="w-3.5 h-3.5" />
@@ -935,7 +935,7 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                                   return [...currentSafe, { url: imgUrl, price: val, code: generateSubCode() }];
                                 });
                               }}
-                              className="w-full pl-4 pr-1 py-1 bg-slate-50 border border-slate-300 rounded-lg text-xs outline-none focus:border-emerald-500 font-semibold text-emerald-700"
+                              className="w-full pl-4 pr-1 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs outline-none focus:border-emerald-500 font-semibold text-emerald-700 dark:text-emerald-400"
                             />
                           </div>
                         </div>
@@ -950,14 +950,14 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
           {/* Description & Gemini AI Enhancer */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-semibold text-slate-700">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Descripción Comercial
               </label>
               <div className="flex items-center gap-2">
                 <select
                   value={selectedTone}
                   onChange={(e) => setSelectedTone(e.target.value as any)}
-                  className="text-[11px] bg-slate-100 border border-slate-200 rounded-lg px-2 py-0.5 text-slate-700 cursor-pointer"
+                  className="text-[11px] bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-0.5 text-slate-700 dark:text-slate-300 cursor-pointer"
                 >
                   <option value="whatsapp">📱 Estilo WhatsApp</option>
                   <option value="promotional">🔥 Promocional</option>
@@ -967,12 +967,12 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
                   type="button"
                   onClick={handleEnhanceWithAi}
                   disabled={aiLoading}
-                  className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                  className="text-xs text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 font-semibold flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 px-2 py-0.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {aiLoading ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
                   ) : (
-                    <Sparkles className="w-3 h-3 text-emerald-600" />
+                    <Sparkles className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                   )}
                   <span>Mejorar con IA</span>
                 </button>
@@ -984,16 +984,16 @@ export const ProductEditorModal: React.FC<ProductEditorModalProps> = ({
               value={formData.description || ''}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Escribe los detalles y beneficios principales..."
-              className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+              className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:focus:ring-emerald-900/40"
             />
           </div>
 
           {/* Submit */}
-          <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-xl cursor-pointer"
+              className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 rounded-xl cursor-pointer"
             >
               Cancelar
             </button>

@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { findRelevantProductsForPrompt, parseHermesResponse } from './hermesAgentUtils';
+import {
+  findRelevantProductsForPrompt,
+  parseHermesResponse,
+  generateOfflineHermesReply,
+  HERMES_PRESET_QUESTIONS,
+} from './hermesAgentUtils';
 import { Product } from '../types/catalog';
+import { initialStoreSettings } from '../data/initialData';
 
 describe('hermesAgentUtils - Motor de Recomendaciones del Asistente Hermes', () => {
   const sampleProducts: Product[] = [
@@ -81,4 +87,27 @@ describe('hermesAgentUtils - Motor de Recomendaciones del Asistente Hermes', () 
     expect(parsed.cleanMessage).toContain('¡Hola! Con gusto te recomiendo');
     expect(parsed.recommendedProductIds).toEqual(['prod_billetera', 'prod_gafas']);
   });
+
+  it('debe incluir una lista amplia y categorizada de preguntas predeterminadas para Hermes', () => {
+    expect(HERMES_PRESET_QUESTIONS.length).toBeGreaterThanOrEqual(10);
+    const categories = new Set(HERMES_PRESET_QUESTIONS.map((q) => q.category));
+    expect(categories.has('popular')).toBe(true);
+    expect(categories.has('budget')).toBe(true);
+    expect(categories.has('shipping')).toBe(true);
+    expect(categories.has('order')).toBe(true);
+    expect(categories.has('payment')).toBe(true);
+    expect(categories.has('special')).toBe(true);
+  });
+
+  it('debe generar respuestas offline precisas para envíos MRW, pagos y pedidos especiales', () => {
+    const replyShipping = generateOfflineHermesReply('¿Cómo son los envíos por MRW?', sampleProducts, initialStoreSettings);
+    expect(replyShipping.message).toContain('MRW');
+
+    const replyPayment = generateOfflineHermesReply('¿Qué métodos de pago tienen? ¿Aceptan pago móvil?', sampleProducts, initialStoreSettings);
+    expect(replyPayment.message).toContain('Pago Móvil');
+
+    const replySpecial = generateOfflineHermesReply('Quiero encargar un producto que no está en el catálogo', sampleProducts, initialStoreSettings);
+    expect(replySpecial.message).toContain('Pedido Especial');
+  });
 });
+

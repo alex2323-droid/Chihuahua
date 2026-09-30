@@ -45,6 +45,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const [isZoomed, setIsZoomed] = useState(false);
   const [copied, setCopied] = useState(false);
   const [addedToCartAnim, setAddedToCartAnim] = useState(false);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   // Compute all available gallery images
   const allImages = React.useMemo(() => {
@@ -89,6 +90,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   // Sync index and default size on product change
   React.useEffect(() => {
     setActiveImageIndex(0);
+    setIsImageLoaded(false);
     if (sizesList.length > 0) {
       setSelectedSize(sizesList[0]);
     } else {
@@ -122,6 +124,11 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     if (!activeUrl) return null;
     return product.imageDetails.find((d) => d.url === activeUrl) || product.imageDetails[activeImageIndex] || null;
   }, [product, allImages, activeImageIndex]);
+
+  // Reset image loaded on active image change
+  React.useEffect(() => {
+    setIsImageLoaded(false);
+  }, [activeImageIndex]);
 
   if (!isOpen || !product) return null;
 
@@ -218,12 +225,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       )}
 
       {/* Main Modal Container */}
-      <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[94vh] md:max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 relative my-auto animate-in zoom-in-95 duration-200">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-3xl w-full max-h-[94vh] md:max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-800 relative my-auto animate-in zoom-in-95 duration-200">
         
         {/* Top Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-20 p-2.5 bg-slate-900/60 hover:bg-slate-900 text-white rounded-full backdrop-blur-md transition-colors shadow-md"
+          className="absolute top-4 right-4 z-20 p-2.5 bg-slate-900/60 hover:bg-slate-900 text-white rounded-full backdrop-blur-md transition-colors shadow-md cursor-pointer"
           title="Cerrar"
         >
           <X className="w-5 h-5" />
@@ -236,12 +243,20 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             
             {/* Main Active Image */}
             <div className="relative flex-1 flex items-center justify-center overflow-hidden">
+              {!isImageLoaded && displayImage && displayImage.trim() !== '' && (
+                <div className="absolute inset-0 skeleton-shimmer bg-slate-900 flex items-center justify-center z-1">
+                  <span className="text-xs text-slate-600 animate-pulse">Cargando imagen...</span>
+                </div>
+              )}
               {displayImage && displayImage.trim() !== '' ? (
                 <img
                   src={displayImage}
                   alt={product.title}
                   decoding="async"
-                  className="w-full h-full object-cover cursor-zoom-in group-hover:scale-102 transition-transform duration-300"
+                  onLoad={() => setIsImageLoaded(true)}
+                  className={`w-full h-full object-cover cursor-zoom-in group-hover:scale-102 transition-all duration-300 ${
+                    isImageLoaded ? 'opacity-100' : 'opacity-0'
+                  }`}
                   onClick={() => setIsZoomed(true)}
                 />
               ) : (
@@ -253,7 +268,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               {/* Zoom Button */}
               <button
                 onClick={() => setIsZoomed(true)}
-                className="absolute bottom-3 right-3 px-3 py-1.5 bg-slate-900/80 hover:bg-slate-900 text-white font-semibold text-xs rounded-xl backdrop-blur-md flex items-center gap-1.5 shadow-md transition-all z-10"
+                className="absolute bottom-3 right-3 px-3 py-1.5 bg-slate-900/80 hover:bg-slate-900 text-white font-semibold text-xs rounded-xl backdrop-blur-md flex items-center gap-1.5 shadow-md transition-all z-10 cursor-pointer"
               >
                 <ZoomIn className="w-4 h-4 text-emerald-400" />
                 <span>Ver Completa</span>
@@ -284,7 +299,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     <button
                       key={idx}
                       onClick={() => setActiveImageIndex(idx)}
-                      className={`relative w-12 h-12 rounded-xl overflow-hidden shrink-0 border-2 transition-all ${
+                      className={`relative w-12 h-12 rounded-xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${
                         activeImageIndex === idx
                           ? 'border-emerald-400 scale-105 shadow-md'
                           : 'border-slate-700 opacity-60 hover:opacity-100'
@@ -313,21 +328,21 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           <div className="p-6 sm:p-8 flex flex-col justify-between md:max-h-[90vh] md:overflow-y-auto">
             <div>
               {/* Category & Brand */}
-              <div className="flex items-center justify-between gap-2 text-xs text-slate-500 mb-2">
+              <div className="flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400 mb-2">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="font-bold text-emerald-700 uppercase tracking-wider bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-100">
+                  <span className="font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/70 px-2.5 py-0.5 rounded-md border border-emerald-100 dark:border-emerald-800">
                     {product.category || 'General'}
                   </span>
-                  <span className="font-medium text-slate-400 truncate">{product.brand}</span>
+                  <span className="font-medium text-slate-400 dark:text-slate-400 truncate">{product.brand}</span>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
                   {product.sku && (
-                    <span className="font-mono text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                    <span className="font-mono text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/70 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-800">
                       Cód: {product.sku}
                     </span>
                   )}
                   {activeImageDetail?.code && (
-                    <span className="font-mono text-xs font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                    <span className="font-mono text-xs font-bold text-teal-800 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/70 px-2 py-0.5 rounded border border-teal-200 dark:border-teal-800">
                       Sub-Cód: {activeImageDetail.code}
                     </span>
                   )}
@@ -335,29 +350,29 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               </div>
 
               {/* Title */}
-              <h2 className="font-display font-bold text-xl sm:text-2xl text-slate-900 leading-snug mb-3">
+              <h2 className="font-display font-bold text-xl sm:text-2xl text-slate-900 dark:text-white leading-snug mb-3">
                 {product.title}
               </h2>
 
               {/* Price Tag */}
-              <div className="flex items-baseline gap-3 mb-4 p-3 bg-slate-50 border border-slate-100 rounded-2xl">
-                <span className="font-mono text-2xl sm:text-3xl font-extrabold text-slate-900">
+              <div className="flex items-baseline gap-3 mb-4 p-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/80 rounded-2xl">
+                <span className="font-mono text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
                   {product.currency}
                   {currentPrice.toFixed(2)}
                 </span>
                 {currentOriginalPrice && (
-                  <span className="font-mono text-sm text-slate-400 line-through">
+                  <span className="font-mono text-sm text-slate-400 dark:text-slate-500 line-through">
                     {product.currency}
                     {currentOriginalPrice.toFixed(2)}
                   </span>
                 )}
                 {activeVariant && !activeImageDetail?.price && (
-                  <span className="ml-auto text-[11px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-md border border-purple-200">
+                  <span className="ml-auto text-[11px] font-bold text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-950/80 px-2 py-0.5 rounded-md border border-purple-200 dark:border-purple-800">
                     Precio para talla {selectedSize}
                   </span>
                 )}
                 {activeImageDetail && activeImageDetail.price !== null && activeImageDetail.price !== undefined && (
-                  <span className="ml-auto text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200 shadow-2xs">
+                  <span className="ml-auto text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800 shadow-2xs">
                     Precio por modelo
                   </span>
                 )}
@@ -365,12 +380,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
               {/* Selected Image Sub-Code Indicator */}
               {activeImageDetail && activeImageDetail.code && (
-                <div className="mb-4 p-3 bg-emerald-50/80 border border-emerald-200/90 rounded-2xl flex items-center justify-between">
-                  <span className="text-xs font-extrabold text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
-                    <Tag className="w-4 h-4 text-emerald-600" />
+                <div className="mb-4 p-3 bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/90 dark:border-emerald-800 rounded-2xl flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-emerald-950 dark:text-emerald-200 uppercase tracking-wider flex items-center gap-1.5">
+                    <Tag className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <span>Modelo / Color Elegido:</span>
                   </span>
-                  <span className="text-xs font-bold text-emerald-800 bg-white px-2.5 py-1 rounded-md border border-emerald-200 shadow-2xs uppercase">
+                  <span className="text-xs font-bold text-emerald-800 dark:text-emerald-200 bg-white dark:bg-slate-800 px-2.5 py-1 rounded-md border border-emerald-200 dark:border-emerald-700 shadow-2xs uppercase">
                     {activeImageDetail.code}
                   </span>
                 </div>
@@ -378,14 +393,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
               {/* Interactive Size Selection Chips */}
               {sizesList.length > 0 && (
-                <div className="mb-5 p-3.5 bg-purple-50/80 border border-purple-200/90 rounded-2xl">
+                <div className="mb-5 p-3.5 bg-purple-50/80 dark:bg-purple-950/30 border border-purple-200/90 dark:border-purple-900/60 rounded-2xl">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-extrabold text-purple-950 flex items-center gap-1.5 uppercase tracking-wider">
-                      <Ruler className="w-4 h-4 text-purple-600" />
+                    <span className="text-xs font-extrabold text-purple-950 dark:text-purple-200 flex items-center gap-1.5 uppercase tracking-wider">
+                      <Ruler className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                       <span>Selecciona tu Talla:</span>
                     </span>
                     {selectedSize && (
-                      <span className="text-xs font-bold text-purple-700 bg-white px-2 py-0.5 rounded-md border border-purple-200 shadow-2xs">
+                      <span className="text-xs font-bold text-purple-700 dark:text-purple-300 bg-white dark:bg-slate-800 px-2 py-0.5 rounded-md border border-purple-200 dark:border-purple-700 shadow-2xs">
                         {selectedSize}
                       </span>
                     )}
@@ -396,10 +411,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         key={sz}
                         type="button"
                         onClick={() => setSelectedSize(sz)}
-                        className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all border ${
+                        className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all border cursor-pointer ${
                           selectedSize === sz
                             ? 'bg-purple-700 text-white border-purple-800 shadow-sm scale-105'
-                            : 'bg-white text-purple-900 border-purple-200 hover:border-purple-400 hover:bg-purple-100/50'
+                            : 'bg-white dark:bg-slate-800 text-purple-900 dark:text-purple-200 border-purple-200 dark:border-purple-700 hover:border-purple-400 hover:bg-purple-100/50 dark:hover:bg-purple-900/40'
                         }`}
                       >
                         {sz}
@@ -411,25 +426,25 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
               {/* Description */}
               <div className="mb-6">
-                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                   Descripción del Producto:
                 </h4>
-                <div className="text-xs sm:text-sm text-slate-600 leading-relaxed space-y-2 whitespace-pre-line bg-slate-50/60 p-3.5 rounded-2xl border border-slate-100">
+                <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed space-y-2 whitespace-pre-line bg-slate-50/60 dark:bg-slate-800/50 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800">
                   {product.description}
                 </div>
               </div>
             </div>
 
             {/* Actions: Add to Cart & Direct WhatsApp Purchase */}
-            <div className="space-y-2.5 pt-2 border-t border-slate-100">
+            <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 
                 {/* Add to Cart Button */}
                 <button
                   onClick={handleAdd}
-                  className={`py-3 px-4 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-md ${
+                  className={`py-3 px-4 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer ${
                     addedToCartAnim
-                      ? 'bg-slate-900 text-white'
+                      ? 'bg-slate-900 dark:bg-emerald-700 text-white'
                       : 'bg-emerald-600 hover:bg-emerald-500 text-white'
                   }`}
                 >
@@ -451,20 +466,20 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   href={buildWhatsAppOrderUrl()}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="py-3 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2"
+                  className="py-3 px-4 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <MessageCircle className="w-4 h-4 text-emerald-600" />
+                  <MessageCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <span>Comprar por WhatsApp</span>
                 </a>
               </div>
 
               {/* Additional options: Copy details or View Original URL */}
-              <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+              <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1">
                 <button
                   onClick={copyProductDetails}
-                  className="hover:text-slate-900 flex items-center gap-1 font-semibold transition-colors"
+                  className="hover:text-slate-900 dark:hover:text-white flex items-center gap-1 font-semibold transition-colors cursor-pointer"
                 >
-                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copied ? '¡Detalles copiados!' : 'Copiar info para compartir'}</span>
                 </button>
 
@@ -473,7 +488,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     href={product.sourceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="hover:text-emerald-700 flex items-center gap-1 font-semibold transition-colors"
+                    className="hover:text-emerald-700 dark:hover:text-emerald-400 flex items-center gap-1 font-semibold transition-colors"
                   >
                     <span>Ver en tienda origen</span>
                     <ExternalLink className="w-3.5 h-3.5" />

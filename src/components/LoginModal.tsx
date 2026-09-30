@@ -84,7 +84,7 @@ export function LoginModal({
   };
 
   const formContent = (
-    <div className={`bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative overflow-hidden ${isInline ? 'shadow-none border-0 p-0' : ''}`}>
+    <div className={`bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 dark:border-slate-800 relative overflow-hidden ${isInline ? 'shadow-none border-0 p-0 !bg-transparent' : ''}`}>
       
       {/* Top Decorative Header */}
       {!isInline && <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600" />}
@@ -92,8 +92,8 @@ export function LoginModal({
       {/* Main Brand Logo & Wordmark */}
       <div className="flex flex-col items-center justify-center text-center mt-3 mb-6">
         <div className="relative group">
-          <div className="absolute inset-0 bg-emerald-500/10 rounded-full blur-md group-hover:bg-emerald-500/20 transition-all duration-300" />
-          <div className="relative w-28 h-28 rounded-full overflow-hidden border-2 border-emerald-500 ring-4 ring-emerald-100 shadow-lg bg-slate-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-full blur-md group-hover:bg-emerald-500/20 transition-all duration-300" />
+          <div className="relative w-28 h-28 rounded-full overflow-hidden border-2 border-emerald-500 ring-4 ring-emerald-100 dark:ring-emerald-950/60 shadow-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center">
             <img 
               src={settings?.storeLogo && settings.storeLogo.trim() !== '' ? settings.storeLogo : "/logo_chihuahua.jpg"} 
               alt={settings?.storeName || "Team Chihuahua"} 
@@ -104,24 +104,24 @@ export function LoginModal({
             />
           </div>
         </div>
-        <h1 className="font-display font-extrabold text-2xl text-slate-900 mt-4 tracking-tight">
+        <h1 className="font-display font-extrabold text-2xl text-slate-900 dark:text-white mt-4 tracking-tight">
           {settings?.storeName || "Team Chihuahua"}
         </h1>
-        <p className="text-xs text-slate-500 font-bold tracking-wide uppercase mt-1">
+        <p className="text-xs text-slate-500 dark:text-slate-400 font-bold tracking-wide uppercase mt-1">
           {settings?.storeTagline || "Tu tienda de encargos"}
         </p>
       </div>
 
-      <div className="flex items-center justify-between mb-5 border-t border-slate-100 pt-5">
+      <div className="flex items-center justify-between mb-5 border-t border-slate-100 dark:border-slate-800 pt-5">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+          <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
             {activeTab === 'login' ? <LogIn className="w-6 h-6" /> : <UserPlus className="w-6 h-6" />}
           </div>
           <div>
-            <h2 className="font-display font-bold text-xl text-slate-900">
+            <h2 className="font-display font-bold text-xl text-slate-900 dark:text-white">
               {activeTab === 'login' ? 'Iniciar Sesión' : 'Crear Cuenta'}
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               {activeTab === 'login' ? 'Ingresa para ver el catálogo y tus pedidos' : 'Regístrate al instante para guardar tus datos'}
             </p>
           </div>
@@ -129,7 +129,7 @@ export function LoginModal({
         {allowClose && (
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-sm font-semibold p-2 rounded-xl hover:bg-slate-100 transition-colors"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-semibold p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             ✕
           </button>
@@ -137,14 +137,14 @@ export function LoginModal({
       </div>
 
       {/* Unified Tab Selector */}
-      <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-2xl mb-5">
+      <div className="grid grid-cols-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl mb-5">
         <button
           type="button"
           onClick={() => handleTabChange('login')}
-          className={`py-2 px-3 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${
+          className={`py-2 px-3 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${
             activeTab === 'login'
-              ? 'bg-white text-slate-900 shadow-xs'
-              : 'text-slate-500 hover:text-slate-800'
+              ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
           <LogIn className="w-3.5 h-3.5" />
@@ -153,10 +153,10 @@ export function LoginModal({
         <button
           type="button"
           onClick={() => handleTabChange('register')}
-          className={`py-2 px-3 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${
+          className={`py-2 px-3 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${
             activeTab === 'register'
-              ? 'bg-white text-slate-900 shadow-xs'
-              : 'text-slate-500 hover:text-slate-800'
+              ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
           <UserPlus className="w-3.5 h-3.5" />
@@ -165,23 +165,23 @@ export function LoginModal({
       </div>
 
       {activeTab === 'register' && (
-        <div className="mb-5 p-3.5 bg-emerald-50/60 border border-emerald-100 rounded-2xl">
-          <div className="text-[11px] text-emerald-800 leading-relaxed">
+        <div className="mb-5 p-3.5 bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/60 rounded-2xl">
+          <div className="text-[11px] text-emerald-800 dark:text-emerald-300 leading-relaxed">
             ✨ <span className="font-bold">¿Primera vez aquí?</span> Crea una cuenta ingresando un nombre de usuario y contraseña. Guardaremos tu carrito y datos de entrega para que no tengas que volver a escribirlos.
           </div>
         </div>
       )}
 
       {error && (
-        <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+        <div className="mb-4 p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs rounded-xl flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-rose-500 dark:text-rose-400 shrink-0 mt-0.5" />
           <div className="flex-1">
             <span>{error}</span>
             {error.includes('ya está registrado') && (
               <button
                 type="button"
                 onClick={() => handleTabChange('login')}
-                className="block mt-1.5 font-bold text-emerald-700 hover:text-emerald-800 underline cursor-pointer"
+                className="block mt-1.5 font-bold text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer"
               >
                 👉 Haz clic aquí para Iniciar Sesión con tu contraseña
               </button>
@@ -192,17 +192,17 @@ export function LoginModal({
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1.5">
+          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
             Nombre de Usuario o Correo
           </label>
           <div className="relative">
-            <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <User className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder={activeTab === 'register' ? 'Tu nombre o correo electrónico' : 'Escribe tu usuario o correo'}
-              className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500 outline-none transition-all"
+              className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:border-emerald-500 outline-none transition-all"
               required
               autoCapitalize="none"
               autoCorrect="off"
@@ -211,23 +211,23 @@ export function LoginModal({
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1.5">
+          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
             Contraseña
           </label>
           <div className="relative">
-            <Key className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Key className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder={activeTab === 'register' ? 'Crea una clave (mínimo 6 caracteres)' : 'Escribe tu contraseña'}
-              className="w-full pl-9 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500 outline-none transition-all"
+              className="w-full pl-9 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:border-emerald-500 outline-none transition-all"
               required
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none p-1"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 focus:outline-none p-1 cursor-pointer"
               aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -239,7 +239,7 @@ export function LoginModal({
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-3 text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 bg-emerald-600 hover:bg-emerald-500`}
+            className={`w-full py-3 text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 bg-emerald-600 hover:bg-emerald-500 cursor-pointer`}
           >
             {loading ? (
               <>
@@ -256,7 +256,7 @@ export function LoginModal({
         </div>
       </form>
 
-      <p className="mt-4 text-center text-[10px] text-slate-400">
+      <p className="mt-4 text-center text-[10px] text-slate-400 dark:text-slate-500">
         {activeTab === 'login' 
           ? 'Tus datos de carrito y entregas se cargarán automáticamente al ingresar.'
           : 'La cuenta se creará inmediatamente y se vinculará a tus próximos pedidos.'}
