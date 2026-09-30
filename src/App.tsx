@@ -1620,12 +1620,11 @@ export default function App() {
         </div>
 
         {/* Product Grid Area */}
-        {isLoadingCatalogs && (!activeCatalog || activeCatalog.products.length === 0) ? (
-          <ProductSkeleton
-            layout={layoutMode}
-            isDark={isDark}
-            count={layoutMode === 'gallery' ? 4 : layoutMode === 'grid-4' ? 8 : 6}
-          />
+        {isLoadingCatalogs ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
+            <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Cargando catálogo...</p>
+          </div>
         ) : filteredProducts.length === 0 ? (
           <div className={`rounded-3xl border p-12 text-center max-w-md mx-auto my-12 shadow-2xs ${
             isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200/90 text-slate-900'

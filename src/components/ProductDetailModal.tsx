@@ -46,6 +46,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const [copied, setCopied] = useState(false);
   const [addedToCartAnim, setAddedToCartAnim] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const imgRef = React.useRef<HTMLImageElement | null>(null);
 
   // Compute all available gallery images
   const allImages = React.useMemo(() => {
@@ -129,6 +130,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   React.useEffect(() => {
     setIsImageLoaded(false);
   }, [activeImageIndex]);
+
+  // Handle cached images in modal
+  React.useEffect(() => {
+    if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
+      setIsImageLoaded(true);
+    }
+  }, [activeImageIndex, product]);
 
   if (!isOpen || !product) return null;
 
@@ -243,20 +251,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             
             {/* Main Active Image */}
             <div className="relative flex-1 flex items-center justify-center overflow-hidden">
-              {!isImageLoaded && displayImage && displayImage.trim() !== '' && (
-                <div className="absolute inset-0 skeleton-shimmer bg-slate-900 flex items-center justify-center z-1">
-                  <span className="text-xs text-slate-600 animate-pulse">Cargando imagen...</span>
-                </div>
-              )}
               {displayImage && displayImage.trim() !== '' ? (
                 <img
+                  ref={imgRef}
                   src={displayImage}
                   alt={product.title}
                   decoding="async"
                   onLoad={() => setIsImageLoaded(true)}
-                  className={`w-full h-full object-cover cursor-zoom-in group-hover:scale-102 transition-all duration-300 ${
-                    isImageLoaded ? 'opacity-100' : 'opacity-0'
-                  }`}
+                  className="w-full h-full object-cover cursor-zoom-in group-hover:scale-102 transition-all duration-300"
                   onClick={() => setIsZoomed(true)}
                 />
               ) : (
