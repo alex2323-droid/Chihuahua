@@ -153,19 +153,44 @@ const mergeLocalAndCloudCatalogs = (localCats: Catalog[], cloudCats: Catalog[]):
   return Array.from(mergedMap.values());
 };
 
+const getPersistedThemeMode = (username?: string | null): 'light' | 'dark' => {
+  if (typeof window !== 'undefined') {
+    if (username) {
+      const userTheme = localStorage.getItem(`catalogcraft_theme_mode_${username.toLowerCase()}`);
+      if (userTheme === 'dark' || userTheme === 'light') return userTheme;
+    }
+    const globalTheme = localStorage.getItem('catalogcraft_theme_mode');
+    if (globalTheme === 'dark' || globalTheme === 'light') return globalTheme;
+
+    const savedSettings = localStorage.getItem('catalogcraft_settings');
+    if (savedSettings) {
+      try {
+        const parsed = JSON.parse(savedSettings);
+        if (parsed?.themeMode === 'dark' || parsed?.themeMode === 'light') {
+          return parsed.themeMode;
+        }
+      } catch {}
+    }
+  }
+  return initialStoreSettings.themeMode || 'light';
+};
+
 export default function App() {
-  // State initialization with localStorage fallback
+  // State initialization with localStorage fallback and user theme preference
   const [settings, setSettings] = useState<StoreSettings>(() => {
+    let baseSettings = initialStoreSettings;
     const saved = localStorage.getItem('catalogcraft_settings');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object') {
-          return parsed;
+          baseSettings = { ...baseSettings, ...parsed };
         }
       } catch {}
     }
-    return initialStoreSettings;
+    const savedUser = localStorage.getItem('catalogcraft_username');
+    const persistedTheme = getPersistedThemeMode(savedUser);
+    return { ...baseSettings, themeMode: persistedTheme };
   });
 
   const [catalogs, setCatalogs] = useState<Catalog[]>(() => {
@@ -284,17 +309,31 @@ export default function App() {
   const [layoutMode, setLayoutMode] = useState<StoreSettings['catalogLayout']>('grid-3');
   const [copiedShareLink, setCopiedShareLink] = useState(false);
 
-  // Sync dark class on root document html
+  // Sync dark class on root document html and persist user theme preference
   useEffect(() => {
-    if (settings.themeMode === 'dark') {
+    const activeTheme = settings.themeMode || 'light';
+    if (activeTheme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [settings.themeMode]);
+    localStorage.setItem('catalogcraft_theme_mode', activeTheme);
+    if (currentSellerName) {
+      localStorage.setItem(`catalogcraft_theme_mode_${currentSellerName.toLowerCase()}`, activeTheme);
+    }
+  }, [settings.themeMode, currentSellerName]);
 
   const handleToggleThemeMode = () => {
     const nextMode: 'light' | 'dark' = settings.themeMode === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('catalogcraft_theme_mode', nextMode);
+    if (currentSellerName) {
+      localStorage.setItem(`catalogcraft_theme_mode_${currentSellerName.toLowerCase()}`, nextMode);
+    }
+    if (nextMode === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
     const updatedSettings: StoreSettings = { ...settings, themeMode: nextMode };
     setSettings(updatedSettings);
     dispatchImmediateSettingsSync(updatedSettings);
@@ -326,7 +365,12 @@ export default function App() {
     getStoredItem<StoreSettings>('cached_settings_latest').then((cachedSettings) => {
       if (!isMounted) return;
       if (cachedSettings && cachedSettings.storeName) {
-        setSettings((prev) => ({ ...prev, ...cachedSettings }));
+        const userTheme = getPersistedThemeMode(currentSellerName);
+        setSettings((prev) => ({
+          ...prev,
+          ...cachedSettings,
+          themeMode: userTheme || cachedSettings.themeMode || prev.themeMode || 'light',
+        }));
         if (cachedSettings.catalogLayout) {
           setLayoutMode(cachedSettings.catalogLayout);
         }
@@ -437,14 +481,19 @@ export default function App() {
     // Subscribe to cloud store settings via Supabase & Upstash Redis
     const unsubSettings = subscribeToSettings(targetUid, (cloudSettings) => {
       if (cloudSettings) {
-        const cloudStr = JSON.stringify(cloudSettings);
+        const userTheme = getPersistedThemeMode(currentSellerName);
+        const mergedCloudSettings: StoreSettings = {
+          ...cloudSettings,
+          themeMode: userTheme || cloudSettings.themeMode || 'light',
+        };
+        const cloudStr = JSON.stringify(mergedCloudSettings);
         isRemoteSettingsUpdateRef.current = true;
         setSettings((prev) => {
           if (JSON.stringify(prev) === cloudStr) return prev;
           lastSavedSettingsRef.current = cloudStr;
-          return cloudSettings;
+          return mergedCloudSettings;
         });
-        setStoredItem('cached_settings_latest', cloudSettings).catch(() => {});
+        setStoredItem('cached_settings_latest', mergedCloudSettings).catch(() => {});
       }
       hasLoadedSettingsFromCloud.current = true;
     });
@@ -1112,6 +1161,12 @@ export default function App() {
     localStorage.setItem('catalogcraft_user_role', role);
     setActiveViewingSellerUid(PRIMARY_STORE_UID);
     localStorage.setItem('catalogcraft_viewing_seller_uid', PRIMARY_STORE_UID);
+
+    const userTheme = getPersistedThemeMode(username);
+    localStorage.setItem('catalogcraft_theme_mode', userTheme);
+    localStorage.setItem(`catalogcraft_theme_mode_${username.toLowerCase()}`, userTheme);
+    setSettings((prev) => ({ ...prev, themeMode: userTheme }));
+
     if (role === 'customer') {
       setIsCustomerMode(true);
     } else {
